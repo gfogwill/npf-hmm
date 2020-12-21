@@ -1,10 +1,10 @@
 import pandas as pd
-import os
 import numpy as np
-from datetime import datetime, timedelta
-from src.data.htk import write_data
-import scipy.integrate as int
+import matplotlib.pyplot as plt
+
+import scipy.integrate as integrate
 from scipy.special import erf
+from scipy.optimize import nnls
 
 e = 1.602E-19
 eo = 8.854e-12
@@ -76,6 +76,9 @@ def invert(raw_data):
     t = raw_data['temp'].mean()
     pr = raw_data['press'].mean()
 
+    # First setvolt column in datafile
+    apu = 10
+
     # Reading voltages
     voltages = get_daily_mean_voltages(raw_data)
 
@@ -102,18 +105,63 @@ def invert(raw_data):
     # Integrate hetransfer functions(check: Stohlzenburg 1988)
     for ii in range(0, voltages.__len__()):
         for jj in range(0, dp_peak.__len__()):
-            tee[ii, jj] = int.quadrature(intfun, np.log10(dp_limits[jj]), np.log10(dp_limits[jj + 1]),
-                                         args=(t, pr, p, voltages[ii],
+            tee[ii, jj] = integrate.quadrature(intfun, np.log10(dp_limits[jj]), np.log10(dp_limits[jj + 1]),
+                                               args=(t, pr, p, voltages[ii],
                                                dma_values['pituus1'], dma_values['arkaksi1'], dma_values['aryksi1'],
                                                dma_values['qa1'], dma_values['qc1'], dma_values['qm1'],
                                                dma_values['qs1'],
                                                dma_values['cpcmodel1'], dma_values['dmamodel1'],
                                                dma_values['pipelength'], dma_values['pipeflow']),
-                                         miniter=15, maxiter=200)[0] \
+                                               miniter=15, maxiter=200)[0] \
                           / (np.log10(dp_limits[jj + 1]) - np.log10(dp_limits[jj]))
 
+    # TODO: Complete options below
     pmatriisi = np.linalg.pinv(tee)
-    return inv_data
+
+    m, n = inv_data.shape
+    apu1 = 2
+
+    kokoja = np.zeros((dma_values['volt1lkm'], m))
+    totconc = np.zeros(m)
+
+    for j in range(0, m):
+        # conc(1: m / 2, 1: volt1lkm)=v(2: 2:m / 2, apu: apu + volt1lkm - 1);
+        # conc = inv_data.iloc[apu1, apu:apu + dma_values['volt1lkm'] - 1]
+        conc = inv_data.iloc[j][inv_data.columns[pd.Series(inv_data.columns).str.startswith('conc')]]
+        kk1 = np.mean(conc[-1 - 1:])
+        conc = conc - kk1
+
+        # Multiplying the concentration with kernel(=from Stohlzenburg thesis) and dlogDp
+
+        if tikh != 1:
+            #kokojak = pmatriisi'*conc'. * (1. / parkoko(:, 2))
+            # NOTE: tee=matriisi
+            kokojak = nnls(tee.T, conc)[0] * (1. / dlogdp)
+
+        # TODO: Complete option below
+        # if tikh == 1:
+        #     lambda_l = l_curve(U, s, conc)
+        #     kokojak = tikhonov(U, s, V, conc,lambda_l) * (1 / parkoko(:,2))
+        #     # modeljak = matriisi'*(kokojak .*parkoko(:,2));
+
+        kokoja[:, j] = kokojak.copy()
+        if tikh != 1:
+            totconc[j] = sum(np.dot(pmatriisi, conc.values))
+        # TODO: Complete option below
+        # if tikh == 1:
+        #     totconc[j] = sum(tikhonov(U, s, V, conc,lambda_l))
+
+    #     % Creating and saving final result file
+    #     [mk nk]=size(kokoja');
+    #     result(2:mk + 1, 3: nk + 2)=kokoja
+    #     ';
+    #     result(1, 1: 2)=[0 0];
+    #     result(2: mk + 1, 1)=time;
+    #     result(2: mk + 1, 2)=totconc
+    #     ';
+    #     result(1, 3: nk + 2)=parkoko(:, 1)';
+
+    return inv_data, kokoja, totconc, dp_peak
 
 
 def intfun(dp, t, press, p, volt, pituus, arkaksi, aryksi, qa, qc, qm, qs, cpcmodel, dmamodel, pipelength, pipeflow):
@@ -147,7 +195,7 @@ def intfun(dp, t, press, p, volt, pituus, arkaksi, aryksi, qa, qc, qm, qs, cpcmo
     # Charging efficiency(from: Wiedensohler 1989)!
     charge = varaus(dp, p, t)
     # Everything together
-    res = (np.nansum((tr * charge.transpose()), axis=0) * totalloss)
+    res = (np.nansum((tr * charge), axis=1) * totalloss)
     dp = dporig
 
     return res
@@ -177,7 +225,7 @@ def teearra(pp, dp, t, p, voltage, pituus, arkaksi, aryksi, qa, qc, qm, qs):
     # size(pp)
     # size(cunn(dp,t,p) ./dp)
     # size(pp*(cunn(dp,t,p) ./dp)')
-    zeta = (pp[:, np.newaxis] * (e * cunn(dp, t, p) / (3 * np.pi * visc(t) * dp)))
+    zeta = (pp * (e * cunn(dp, t, p)[:, np.newaxis] / (3 * np.pi * visc(t) * dp[:, np.newaxis])))
     zetap = np.zeros((dp.__len__(), pp.__len__()))
 
     # size(zeta)
@@ -191,7 +239,7 @@ def teearra(pp, dp, t, p, voltage, pituus, arkaksi, aryksi, qa, qc, qm, qs):
     # semilogx(dp,zetap)
     # pause
 
-    rhota = np.zeros((pp.__len__(), dp.__len__()))
+    rhota = np.zeros((dp.__len__(), pp.__len__()))
 
     for i in range(0, pp.__len__()):
         rhota[:, i] = np.sqrt((zetap[:, i] / pp[i]) * (gabeta * np.log(aryksi / arkaksi) * boltz * t / (e * voltage)))
@@ -270,16 +318,16 @@ def varaus(dp, pp, t):
     coeff = np.zeros((dp.__len__(), pp.__len__()))
     coefft = np.zeros((dp.__len__(), pp.__len__()))
 
-    for i in range(1, 6):
-        coefft[:, 1:min(2, pp.__len__())] = coefft[:, 1:min(2, pp.__len__())] + (
-                alfa[1:min(2, pp.__len__()), i] * (np.log10(dp / 1e-9)[:, np.newaxis] ** (i - 1)))
+    for i in range(1, 7):
+        coefft[:, 0:min(2, pp.__len__())] = coefft[:, 0:min(2, pp.__len__())] + (
+                alfa[0:min(2, pp.__len__()), i-1] * (np.log10(dp / 1e-9)[:, np.newaxis] ** (i - 1)))
 
-    coeff[:, 1:min(2, pp.__len__())] = 10 ** coefft[:, 1:min(2, pp.__len__())]
+    coeff[:, 0:min(2, pp.__len__())] = 10 ** coefft[:, 0:min(2, pp.__len__())]
 
-    for i in range(3, pp.__len__()):
+    for i in range(2, pp.__len__()-1):
         coe = (2.0 * np.pi * eo * dp * boltz * t) / e ** 2
         coeff[:, i] = ((1.0 / np.sqrt(coe * 2.0 * np.pi)) * np.exp(
-            -(-np.sign(pp[1]) * i - coe * 0.1335) ** 2 / (2.0 * coe)))
+            -(-np.sign(pp[0]) * i - coe * 0.1335) ** 2 / (2.0 * coe)))
 
     return coeff
 
@@ -455,7 +503,7 @@ def get_dma_const():
     # This is used after 11.3.2003 at Utö
 
     # Change the system information here
-    dma_const = dict(tem=295.15, press=1.00e5, rh=999.99, dmalkm=1, volt1lkm=25, polarity=1, pipelength=2.0,
+    dma_const = dict(tem=295.15, press=1.00e5, rh=999.99, dmalkm=1, volt1lkm=25, polarity=-1, pipelength=2.0,
                      pipeflow=1 / 1000 / 60, pipediameter=4 / 1000, pituus1=0.28, arkaksi1=3.3e-2, aryksi1=2.5E-2,
                      dmamodel1='HAUM', cpcmodel1='3010', qc1=5.0 / 1000 / 60, qm1=5.0 / 1000 / 60, qa1=1.0 / 1000 / 60,
                      qs1=1.0 / 1000 / 60)
@@ -463,5 +511,20 @@ def get_dma_const():
 
 
 if __name__ == '__main__':
-    data = read_raw_dmps('DM20170101.DAT')
-    inv_data = invert(data)
+    data = read_raw_dmps('DM20170123.DAT')
+    inv_data, par_conc, tot_conc, dp_peak = invert(data)
+    plt.pcolor(inv_data.index, dp_peak, np.log10(abs(par_conc)+1e-6), cmap='jet')
+    plt.clim([0, 4])
+
+    if dp_peak[0] * .9 > 1e-8:
+        # plt.xlim([np.fix(V(1)) - 0.05, np.fix(V(1)) + 1.05])
+        plt.ylim([1e-8, dp_peak[-1] * 1.1])
+    else:
+        # plt.xlim([np.fix(V(1)) - 0.05, np.fix(V(1)) + 1.05])
+        # plt.ylim((dp_peak[0] * .9, dp_peak[-1] * 1.1))
+        plt.axis(ymin=dp_peak[0]*0.9, ymax=dp_peak[-1]*1.1)
+
+    plt.yscale('log')
+    plt.show()
+    plt.plot(inv_data.index, tot_conc)
+    plt.show()
