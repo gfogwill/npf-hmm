@@ -6,6 +6,8 @@ import scipy.integrate as integrate
 from scipy.special import erf
 from scipy.optimize import nnls
 
+import logging
+
 e = 1.602E-19
 eo = 8.854e-12
 boltz = 1.381e-23
@@ -16,6 +18,8 @@ def read_raw_dmps(fi):
 
     """
     raw_data_path = '../../data/raw/dmps/raw/'
+
+    logging.info('File name: ' + fi)
 
     year = fi[2:6]
     month = fi[6:8]
@@ -75,6 +79,17 @@ def invert(raw_data):
 
     t = raw_data['temp'].mean()
     pr = raw_data['press'].mean()
+    rh = raw_data['hum'].mean()
+    flow = raw_data['excess'].mean()
+    sample = raw_data['sample'].mean()
+
+    logging.info('Reynolds number in sample line: ' + str(reynolds_number))
+    # logging.info('File name: ' + filena(1:10))
+    logging.info('Temperature:  ' + str(t-273.15) + ' C')
+    logging.info('Pressure:     ' + str(pr/100) + ' hPa')
+    logging.info('RH:           ' + str(rh) + ' %')
+    logging.info('Aerosol flow: ' + str(sample) + ' L/min')
+    logging.info('Sheath flow:  ' + str(flow) + ' L/min')
 
     # First setvolt column in datafile
     apu = 10
