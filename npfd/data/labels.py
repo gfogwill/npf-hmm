@@ -4,8 +4,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from src.models.HTK.htktools import clean_dir
-from src.data.size_distribution import decimalDOY2datetime
+from npfd.models.HTK.htktools import clean_dir
+from npfd.data.size_distribution import decimalDOY2datetime
 
 
 def make_labels(thresholds, how='event-noevent', data_version=2):

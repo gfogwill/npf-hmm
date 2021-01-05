@@ -25,7 +25,7 @@ def clean_models():
         os.mkdir('../models/hmm/' + str(i))
 
 
-def gen_hmmdefs_from_proto(monophones='../src/models/HTK/misc/monophones',
+def gen_hmmdefs_from_proto(monophones='../npfd/models/HTK/misc/monophones',
                            proto='../models/hmm/0/proto',
                            output='../models/hmm/0/hmmdefs'):
 
@@ -54,7 +54,7 @@ def gen_hmmdefs(output='../models/hmm/0/hmmdefs'):
 
 
 def gen_macros(vFloors='../models/hmm/0/vFloors',
-               proto='../src/models/HTK/misc/proto',
+               proto='../npfd/models/HTK/misc/proto',
                output='../models/hmm/0/macros'):
 
     with open(output, 'wt') as out_file:
@@ -68,15 +68,15 @@ def gen_macros(vFloors='../models/hmm/0/vFloors',
 
 def display_artifact(which='all'):
     if which is 'all':
-        for file in os.listdir('../src/HTK/misc'):
-            print("****   src/models/HTK/misc/" + file + "   ****\n")
-            with open(os.path.join('../src/models/HTK/misc', file)) as fi:
+        for file in os.listdir('../npfd/HTK/misc'):
+            print("****   npfd/models/HTK/misc/" + file + "   ****\n")
+            with open(os.path.join('../npfd/models/HTK/misc', file)) as fi:
                 print(fi.read())
 
     else:
         for artifact in which:
-            print("****   src/HTK/misc/" + artifact + "   ****\n")
-            with open(os.path.join('../src/HTK/misc', artifact)) as fi:
+            print("****   npfd/HTK/misc/" + artifact + "   ****\n")
+            with open(os.path.join('../npfd/HTK/misc', artifact)) as fi:
                 print(fi.read())
 
 

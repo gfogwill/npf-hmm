@@ -4,9 +4,9 @@ import logging
 import pandas as pd
 import numpy as np
 
-from src.models.HTK.htktools import HCopy, clean_dir
-from src.data.size_distribution import cm3_to_dndlogdp
-from src.data.htk import write_data
+from npfd.models.HTK.htktools import HCopy, clean_dir
+from npfd.data.size_distribution import cm3_to_dndlogdp
+from npfd.data.htk import write_data
 
 
 def make_dataset(normalize=True, data_version=2):
@@ -14,6 +14,7 @@ def make_dataset(normalize=True, data_version=2):
 
     """
     data_version = str(data_version)
+
     # Remove all files from interim directory
     clean_interim()
 
@@ -51,13 +52,13 @@ def make_dataset(normalize=True, data_version=2):
 
     logging.info('Adding deltas and acelerations...')
 
-    test_count = HCopy(['-C', '../src/models/HTK/misc/config.hcopy',
+    test_count = HCopy(['-C', '../npfd/models/HTK/misc/config.hcopy',
                         '-S', '../data/interim/test_hcopy.scp',
                         '-T', 1])
     logging.info("Test files:\t" + str(test_count))
 
     # Train
-    train_count = HCopy(['-C', '../src/models/HTK/misc/config.hcopy',
+    train_count = HCopy(['-C', '../npfd/models/HTK/misc/config.hcopy',
                          '-S', '../data/interim/train_hcopy.scp',
                          '-T', 1])
     logging.info("Train files:\t" + str(train_count))

@@ -2,8 +2,8 @@ import pandas as pd
 import os
 import numpy as np
 from datetime import datetime, timedelta
-from src.data.htk import write_data
-from src.models.HTK.htktools import HCopy
+from npfd.data.htk import write_data
+from npfd.models.HTK.htktools import HCopy
 from scipy.optimize import curve_fit
 
 
@@ -63,7 +63,7 @@ def to_htk():
                 fo = os.path.join('../data/interim/', train_id, file[:-4])
                 fo_D_A = fo.replace('train', 'train_D_A')
                 write_data(fo, np.log10(np.absolute(nukdata + 10)))
-                HCopy([fo, fo_D_A, '-C', '../src/models/HTK/misc/config.hcopy'])
+                HCopy([fo, fo_D_A, '-C', '../npfd/models/HTK/misc/config.hcopy'])
 
                 scp_file.write(fo_D_A + '\n')
                 count += 1
@@ -92,7 +92,7 @@ def to_htk():
                 fo = os.path.join('../data/interim/', test_id, file[:-4])
                 fo_D_A = fo.replace('test', 'test_D_A')
                 write_data(fo, np.log10(np.absolute(nukdata + 10)))
-                HCopy([fo, fo_D_A, '-C', '../src/models/HTK/misc/config.hcopy'])
+                HCopy([fo, fo_D_A, '-C', '../npfd/models/HTK/misc/config.hcopy'])
 
                 scp_file.write(fo_D_A + '\n')
                 count += 1
