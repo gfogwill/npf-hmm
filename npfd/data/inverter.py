@@ -85,7 +85,7 @@ def invert(raw_data):
 
     logging.info('Reynolds number in sample line: ' + str(reynolds_number))
     # logging.info('File name: ' + filena(1:10))
-    logging.info('Temperature:  ' + str(t-273.15) + ' C')
+    logging.info('Temperature:  ' + str(t - 273.15) + ' C')
     logging.info('Pressure:     ' + str(pr/100) + ' hPa')
     logging.info('RH:           ' + str(rh) + ' %')
     logging.info('Aerosol flow: ' + str(sample) + ' L/min')

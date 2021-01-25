@@ -1,50 +1,67 @@
 import logging
+import os
 
 from npfd.models.HTK import htktools as htkt
+
+COMMANDS_FILE_PATH = os.path.join(os.path.dirname(__file__), '../../npfd/models/HTK/tmp/cmds.hed')
+
+MODELS_DIR = os.path.join(os.path.dirname(__file__), '../../models/hmm/')
+XFORMS_DIR = os.path.join(os.path.dirname(__file__), '../../models/xforms/')
+CLASSES_DIR = os.path.join(os.path.dirname(__file__), '../../models/classes/')
+
+RESULTS_MLF_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/results.mlf')
+INTERIM_DATA_DIR = os.path.join(os.path.dirname(__file__), '../../data/interim/')
+CONFIG_FILE_PATH = os.path.join(os.path.dirname(__file__), './HTK/misc/config')
+CONFIG_GLOBALS_FILE_PATH = os.path.join(os.path.dirname(__file__), './HTK/misc/config.globals')
+MONOPHONES_PATH = os.path.join(os.path.dirname(__file__), './HTK/misc/monophones')
+PROTO_PATH = os.path.join(os.path.dirname(__file__), './HTK/misc/proto')
+DICT_PATH = os.path.join(os.path.dirname(__file__), './HTK/misc/dict')
+WDNET_PATH = os.path.join(os.path.dirname(__file__), './HTK/misc/wdnet')
 
 
 class HiddenMarkovModel(object):
     def __init__(self, **model_hyper_parameters):
+        self.adapted = False
         self._params = None
         self.most_trained_model = None
 
-    def initialize(self, data, how='HCompV', variance_floor=0.1, minimum_variance=0):
+    def initialize(self, data, hyperparameters):
         htkt.clean_models()
 
         logging.info("Initializing model...")
 
-        if how == 'HCompV':
-            htkt.HCompV(['-C', '../npfd/models/HTK/misc/config',
+        if hyperparameters['init_metho'] == 'HCompV':
+            htkt.HCompV(['-C', CONFIG_FILE_PATH,
                          '-S', data['script_file'],
-                         '-M', '../models/hmm/0',
+                         '-M', MODELS_DIR + '0',
                          '-T', 1,
-                         '-f', variance_floor,
-                         '-v', minimum_variance,
+                         '-f', "{:.10f}".format(hyperparameters['variance_floor']),
+                         '-v', "{:.10f}".format(hyperparameters['minimum_variance']),
                          '-m',
-                         '../npfd/models/HTK/misc/proto'])
+                         PROTO_PATH])
 
             htkt.gen_hmmdefs_from_proto()
             htkt.gen_macros()
 
-        elif how == 'HInit':
+        elif hyperparameters['init_metho'] == 'HInit':
             for label in ['ne', 'e']:
-                htkt.HInit(['-C', '../npfd/models/HTK/misc/config',
-                            '-S', '../data/interim/train.scp',
-                            '-I', '../data/interim/labels.mlf',
-                            '-M', '../models/hmm/0',
+                htkt.HInit(['-C', CONFIG_FILE_PATH,
+                            '-S', data['script_file'],
+                            '-I', '../data/interim/manual_labels_real_data.mlf',
+                            '-M', MODELS_DIR + '0',
                             # '-T', 1,
                             '-l', label,
                             '-o', label,
-                            '-v', minimum_variance,
-                            '../npfd/models/HTK/misc/proto'])
+                            '-v', "{:.10f}".format(hyperparameters['minimum_variance']),
+                            PROTO_PATH])
 
-            htkt.HCompV(['-C', '../npfd/models/HTK/misc/config',
-                         '-S', '../data/interim/train.scp',
-                         '-M', '../models/hmm/0',
+            htkt.HCompV(['-C', CONFIG_FILE_PATH,
+                         '-S', data['script_file'],
+                         '-M', MODELS_DIR + '0',
                          '-T', 1,
-                         '-f', variance_floor,
+                         '-f', "{:.10f}".format(hyperparameters['variance_floor']),
                          '-m',
-                         '../npfd/models/HTK/misc/proto'])
+                         PROTO_PATH])
 
             htkt.gen_hmmdefs()
             htkt.gen_macros()
@@ -53,128 +70,143 @@ class HiddenMarkovModel(object):
 
         return 0
 
-    def train(self, data, labels):
+    def train(self, data, labels, hyperparameters):
+        logging.info("Training the model...")
         n = 3
 
         for i in range(self.most_trained_model, self.most_trained_model + n):
-            htkt.HERest(['-C', '../npfd/models/HTK/misc/config',
+            htkt.HERest(['-C', CONFIG_FILE_PATH,
                          '-I', labels['mlf'],
                          '-S', data['script_file'],
-                         '-H', '../models/hmm/' + str(self.most_trained_model) + '/macros',
-                         '-H', '../models/hmm/' + str(self.most_trained_model) + '/hmmdefs',
-                         '-M', '../models/hmm/' + str(self.most_trained_model + 1) + '/',
-                         '-s', '../models/hmm/' + str(self.most_trained_model + 1) + '/stats',
+                         '-H', MODELS_DIR + str(self.most_trained_model) + '/macros',
+                         '-H', MODELS_DIR + str(self.most_trained_model) + '/hmmdefs',
+                         '-M', MODELS_DIR + str(self.most_trained_model + 1) + '/',
+                         '-s', MODELS_DIR + str(self.most_trained_model + 1) + '/stats',
+                         '-v', "{:0.10f}".format(hyperparameters['minimum_variance']),
                          # '-t', 250.0,# 150.0, 1000.0,
                          # '-T', 1,
-                         '../npfd/models/HTK/misc/monophones'])
+                         MONOPHONES_PATH])
 
             #model += 1
             self.most_trained_model += 1
 
+        logging.info("Most trained model: " + str(self.most_trained_model))
+
         return self.most_trained_model
 
-    def test(self, data, labels):
+    def test(self, data, labels, hyperparameters):
+        logging.info("Testing model: " + str(self.most_trained_model))
 
-        if data['id'].split('.')[2] == 'real':
-            htkt.HVite(['-C', '../npfd/models/HTK/misc/config',
-                        '-H', '../models/hmm/' + str(self.most_trained_model) + '/macros',
-                        '-H', '../models/hmm/' + str(self.most_trained_model) + '/hmmdefs',
-                        #             '-p', 0,
-                        #             '-s', 5,
+        if self.adapted:
+            logging.info('Testing real data')
+            htkt.HVite(['-C', CONFIG_FILE_PATH,
+                        '-H', MODELS_DIR + str(self.most_trained_model) + '/macros',
+                        '-H', MODELS_DIR + str(self.most_trained_model) + '/hmmdefs',
+                        '-p', "{:.10f}".format(hyperparameters['word_insertion_penalty']),
+                        '-s', "{:.10f}".format(hyperparameters['grammar_scale_factor']),
                         '-A',
                         # '-T', 1,
-                        '-J', '../models/classes/',
-                        '-J', '../models/xforms', 'mllr1',
-                        '-h', '../data/interim/' + data['id'] + '/%*',
+                        '-J', CLASSES_DIR,
+                        '-J', XFORMS_DIR, 'mllr1',
+                        '-h', '*/%*',
                         '-k',
-                        '-w', '../npfd/models/HTK/misc/wdnet',
+                        '-w', WDNET_PATH,
                         '-S', data['script_file'],
-                        '-i', '../data/interim/results.mlf',
-                        '../npfd/models/HTK/misc/dict',
-                        '../npfd/models/HTK/misc/monophones'])
+                        '-i', RESULTS_MLF_PATH,
+                        DICT_PATH,
+                        MONOPHONES_PATH])
 
             r = htkt.HResults(['-I', labels['mlf'],
                                '-p',
-                               '../npfd/models/HTK/misc/monophones',
-                               '../data/interim/results.mlf'])
+                               MONOPHONES_PATH,
+                               RESULTS_MLF_PATH])
         else:
-            htkt.HVite(['-C', '../npfd/models/HTK/misc/config',
-                        '-H', '../models/hmm/' + str(self.most_trained_model) + '/macros',
-                        '-H', '../models/hmm/' + str(self.most_trained_model) + '/hmmdefs',
-                        '-p', 0,
-                        '-s', 5,
+            htkt.HVite(['-C', CONFIG_FILE_PATH,
+                        '-H', MODELS_DIR + str(self.most_trained_model) + '/macros',
+                        '-H', MODELS_DIR + str(self.most_trained_model) + '/hmmdefs',
+                        '-p', "{:.10f}".format(hyperparameters['word_insertion_penalty']),
+                        '-s', "{:.10f}".format(hyperparameters['grammar_scale_factor']),
                         '-A',
                         # '-T', 1,
                         '-S', data['script_file'],
-                        '-i', '../data/interim/results.mlf',
-                        '-w', '../npfd/models/HTK/misc/wdnet',
-                        '../npfd/models/HTK/misc/dict',
-                        '../npfd/models/HTK/misc/monophones'])
+                        '-i', RESULTS_MLF_PATH,
+                        '-w', WDNET_PATH,
+                        DICT_PATH,
+                        MONOPHONES_PATH])
 
             r = htkt.HResults(['-I', labels['mlf'],
                                '-p',
-                               '../npfd/models/HTK/misc/monophones',
-                               '../data/interim/results.mlf'])
+                               MONOPHONES_PATH,
+                               RESULTS_MLF_PATH])
 
-        r['mlf'] = '../data/interim/results.mlf'
+        r['mlf'] = RESULTS_MLF_PATH
         return r
 
     def edit(self, commands):
+        logging.info("Editing model " + str(self.most_trained_model))
 
-        cmd_file_path = '../npfd/models/HTK/tmp/cmds.hed'
-
-        with open(cmd_file_path, 'wt') as cmd_file:
+        with open(COMMANDS_FILE_PATH, 'wt') as cmd_file:
             for command in commands:
                 cmd_file.write(command + '\n')
 
-        htkt.HHEd(['-H', '../models/hmm/' + str(self.most_trained_model) + '/macros',
-                   '-H', '../models/hmm/' + str(self.most_trained_model) + '/hmmdefs',
-                   '-M', '../models/hmm/' + str(self.most_trained_model + 1) + '',
+        htkt.HHEd(['-H', MODELS_DIR + str(self.most_trained_model) + '/macros',
+                   '-H', MODELS_DIR + str(self.most_trained_model) + '/hmmdefs',
+                   '-M', MODELS_DIR + str(self.most_trained_model + 1) + '',
                    '-T', 1,
-                   cmd_file_path,
-                   '../npfd/models/HTK/misc/monophones'])
+                   COMMANDS_FILE_PATH,
+                   MONOPHONES_PATH])
 
-        #model += 1
         self.most_trained_model += 1
+
+        logging.info("Most trained model: " + str(self.most_trained_model))
 
         return self.most_trained_model
 
-    def adapt(self, data, labels):
+    def adapt(self, data, labels, hyperparameters):
+        logging.info("Adapting model " + str(self.most_trained_model))
+
+        print(MODELS_DIR)
+        print(self.most_trained_model)
 
         htkt.HERest([
-            '-C', '../npfd/models/HTK/misc/config',
-            '-C', '../npfd/models/HTK/misc/config.globals',
+            '-C', CONFIG_FILE_PATH,
+            '-C', CONFIG_GLOBALS_FILE_PATH,
             '-S', data['script_file'],
             '-I', labels['mlf'],
             '-u', 'a',
+            # '-v', "{:.10f}".format(hyperparameters['minimum_variance']),
+            # '-t', 250.0,
             #     '-T',1,
-            '-K', '../models/xforms', 'mllr1',
-            '-J', '../models/classes/',
-            '-h', '../data/interim/' + data['id'] + '/%*',
-            '-H', '../models/hmm/' + str(self.most_trained_model) + '/macros',
-            '-H', '../models/hmm/' + str(self.most_trained_model) + '/hmmdefs',
-            '../npfd/models/HTK/misc/monophones'])
+            '-K', XFORMS_DIR, 'mllr1',
+            '-J', CLASSES_DIR,
+            # '-h', INTERIM_DATA_DIR + data['id'] + '/%*',
+            '-h', '*/%*',
+            '-H', MODELS_DIR + str(self.most_trained_model) + '/macros',
+            '-H', MODELS_DIR + str(self.most_trained_model) + '/hmmdefs',
+            MONOPHONES_PATH])
 
-        # model += 1
+        self.adapted = True
 
         return self.most_trained_model
 
-    def predict(self, data):
-        htkt.HVite(['-C', '../npfd/models/HTK/misc/config',
-                    '-H', '../models/hmm/' + str(self.most_trained_model) + '/macros',
-                    '-H', '../models/hmm/' + str(self.most_trained_model) + '/hmmdefs',
+    def predict(self, data, hyperparameters):
+        htkt.HVite(['-C', CONFIG_FILE_PATH,
+                    '-H', MODELS_DIR + str(self.most_trained_model) + '/macros',
+                    '-H', MODELS_DIR + str(self.most_trained_model) + '/hmmdefs',
                     #             '-p', 0,
                     #             '-s', 5,
                     '-A',
                     # '-T', 1,
-                    '-J', '../models/classes/',
-                    '-J', '../models/xforms', 'mllr1',
-                    '-h', '../data/interim/' + data['id'] + '/%*',
+                    '-p', "{:.10f}".format(hyperparameters['word_insertion_penalty']),
+                    '-s', "{:.10f}".format(hyperparameters['grammar_scale_factor']),
+                    '-J', CLASSES_DIR,
+                    '-J', XFORMS_DIR, 'mllr1',
+                    '-h', '*/%*',
                     '-k',
-                    '-w', '../npfd/models/HTK/misc/wdnet',
+                    '-w', WDNET_PATH,
                     '-S', data['script_file'],
-                    '-i', '../data/interim/results.mlf',
-                    '../npfd/models/HTK/misc/dict',
-                    '../npfd/models/HTK/misc/monophones'])
+                    '-i', RESULTS_MLF_PATH,
+                    DICT_PATH,
+                    MONOPHONES_PATH])
 
-        return {'mlf': '../data/interim/results.mlf'}
+        return {'mlf': RESULTS_MLF_PATH}

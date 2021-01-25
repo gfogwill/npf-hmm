@@ -17,17 +17,29 @@ logging.basicConfig(level=logging.INFO)
 HTKDIR = '/home/gfogwil/Documentos/Facultad/Tesis/programs/htk/HTKTools/'
 NUMBER_OF_SIZE_BINS = 25
 
+HTKTOOLDIR = os.path.dirname(__file__)
+MONOPHONES_PATH = os.path.join(HTKTOOLDIR, './misc/monophones')
+PROTO_PATH = os.path.join(HTKTOOLDIR, './misc/proto')
+
+OUT_INIT_PROTO_PATH = os.path.join(HTKTOOLDIR, '../../../models/hmm/0/proto')
+OUT_INIT_HMMDEFS_PATH = os.path.join(HTKTOOLDIR, '../../../models/hmm/0/hmmdefs')
+OUT_INIT_VFLOORS_PATH = os.path.join(HTKTOOLDIR, '../../../models/hmm/0/vFloors')
+OUT_INIT_MACROS_PATH = os.path.join(HTKTOOLDIR, '../../../models/hmm/0/macros')
+
+MODELS_DIR = os.path.join(os.path.dirname(__file__), '../../../models/hmm/')
+
 
 def clean_models():
-    clean_dir('../models/hmm')
+    clean_dir(MODELS_DIR)
 
     for i in range(50):
-        os.mkdir('../models/hmm/' + str(i))
+        os.mkdir(MODELS_DIR + str(i))
 
 
-def gen_hmmdefs_from_proto(monophones='../npfd/models/HTK/misc/monophones',
-                           proto='../models/hmm/0/proto',
-                           output='../models/hmm/0/hmmdefs'):
+def gen_hmmdefs_from_proto(monophones=MONOPHONES_PATH,
+                           proto=OUT_INIT_PROTO_PATH,
+                           output=OUT_INIT_HMMDEFS_PATH):
+    print(os.getcwd())
 
     with open(proto) as proto_file:
         proto_str = proto_file.readlines()[3:]
@@ -41,11 +53,11 @@ def gen_hmmdefs_from_proto(monophones='../npfd/models/HTK/misc/monophones',
                 [hmmdefs.write(line) for line in proto_str[1:]]
 
 
-def gen_hmmdefs(output='../models/hmm/0/hmmdefs'):
+def gen_hmmdefs(output=OUT_INIT_HMMDEFS_PATH):
 
-    with open('../models/hmm/0/ne') as ne_file:
+    with open(MODELS_DIR + '0/ne') as ne_file:
         ne_str = ne_file.readlines()[3:]
-    with open('../models/hmm/0/e') as e_file:
+    with open(MODELS_DIR + '0/e') as e_file:
         e_str = e_file.readlines()[3:]
 
     with open(output, 'wt') as hmmdefs:
@@ -53,9 +65,9 @@ def gen_hmmdefs(output='../models/hmm/0/hmmdefs'):
         [hmmdefs.write(line) for line in e_str]
 
 
-def gen_macros(vFloors='../models/hmm/0/vFloors',
-               proto='../npfd/models/HTK/misc/proto',
-               output='../models/hmm/0/macros'):
+def gen_macros(vFloors=OUT_INIT_VFLOORS_PATH,
+               proto=PROTO_PATH,
+               output=OUT_INIT_MACROS_PATH):
 
     with open(output, 'wt') as out_file:
         with open(proto) as proto_file:
@@ -337,6 +349,7 @@ if __name__ == '__main__':
     model = 7
     HEAdapt(['-S', '../data/interim/real_files.scp',
                   '-I', '../data/raw/dmps/manual_labels.mlf',
+                  '-p', 0.000001,
                   '-H', '../models/hmm/' + str(model) + 'macros',
                   '-H', '../models/hmm/' + str(model) + 'hmmdefs',
                   '-M', '../models/hmm/' + str(model + 1)])

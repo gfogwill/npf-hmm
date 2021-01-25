@@ -2,8 +2,6 @@ import pandas as pd
 import os
 import numpy as np
 from datetime import datetime, timedelta
-from npfd.data.htk import write_data
-from npfd.models.HTK.htktools import HCopy
 from scipy.optimize import curve_fit
 
 
@@ -32,73 +30,6 @@ def decimalDOY2datetime(dDOY, year=2017):
         result = epoch + timedelta(days=dDOY)
 
     return result
-
-
-def to_htk():
-
-    ext_path = '../data/external/'
-    dmps_train_data_path = '../data/raw/dmps/inv/'
-    dmps_test_data_path = '../data/raw/dmps/dmps_mbio_2015/DATA/'
-
-    train_id = '2017.train.real'
-    try:
-        os.mkdir(os.path.join('../data/interim', train_id.replace('train','train_D_A')))
-        os.mkdir(os.path.join('../data/interim', train_id))
-    except FileExistsError:
-        pass
-    scp_file_name = '../data/interim/' + train_id.replace('train', 'train_D_A') + '.scp'
-    with open(scp_file_name, 'wt') as scp_file:
-        count = 0
-        for file in os.listdir(dmps_train_data_path):
-
-            if file.endswith('.cle'):
-                nukdata = pd.read_csv(dmps_train_data_path + file, sep=r'\s+')
-                nukdata = nukdata.replace(np.nan, -1)
-                nukdata.index = nukdata.iloc[:, 0].apply(decimalDOY2datetime)
-                nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').ffill()
-                nukdata = nukdata.replace(np.nan, 0)
-
-                file = file.replace('DM', '')
-                file = file.replace('dm', '')
-                fo = os.path.join('../data/interim/', train_id, file[:-4])
-                fo_D_A = fo.replace('train', 'train_D_A')
-                write_data(fo, np.log10(np.absolute(nukdata + 10)))
-                HCopy([fo, fo_D_A, '-C', '../npfd/models/HTK/misc/config.hcopy'])
-
-                scp_file.write(fo_D_A + '\n')
-                count += 1
-
-    train = {'script_file': scp_file_name, 'count': count, 'id': train_id.replace('train', 'train_D_A')}
-
-    test_id = '2015.test.real'
-    try:
-        os.mkdir(os.path.join('../data/interim', test_id.replace('test', 'test_D_A')))
-        os.mkdir(os.path.join('../data/interim', test_id))
-    except FileExistsError:
-        pass
-    scp_file_name = '../data/interim/' + test_id.replace('test', 'test_D_A') + '.scp'
-    with open(scp_file_name, 'wt') as scp_file:
-        count = 0
-        for file in os.listdir(dmps_test_data_path):
-            if file.endswith('.cle'):
-                nukdata = pd.read_csv(dmps_test_data_path + file, sep=r'\s+')
-                nukdata = nukdata.replace(np.nan, -1)
-                nukdata.index = nukdata.iloc[:, 0].apply(decimalDOY2datetime)
-                nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').ffill()
-                nukdata = nukdata.replace(np.nan, 0)
-
-                file = file.replace('DM', '')
-                file = file.replace('dm', '')
-                fo = os.path.join('../data/interim/', test_id, file[:-4])
-                fo_D_A = fo.replace('test', 'test_D_A')
-                write_data(fo, np.log10(np.absolute(nukdata + 10)))
-                HCopy([fo, fo_D_A, '-C', '../npfd/models/HTK/misc/config.hcopy'])
-
-                scp_file.write(fo_D_A + '\n')
-                count += 1
-    test = {'script_file': scp_file_name, 'count': count, 'id': test_id.replace('test', 'test_D_A')}
-
-    return train, test
 
 
 def gauss(x, mu, sigma, A):

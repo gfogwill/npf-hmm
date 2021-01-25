@@ -16,7 +16,7 @@ Contents:
    commands
    data
 
-.. automodule:: HTK.htktools
+.. automodule:: npfd.data.dataset
     :members:
 
 .. automodule:: HTK.scripts

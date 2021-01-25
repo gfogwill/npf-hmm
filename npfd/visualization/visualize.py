@@ -15,135 +15,136 @@ from npfd.data.labels import get_labels_ene
 import shutil
 
 
-def generate_plots(out_dir, data, l1=None, l2=None):
-    scp_file = data['script_file']
-    # version, which, origin = data['id'].split('.')
-    if os.path.exists('../reports/figures/' + out_dir):
-        shutil.rmtree('../reports/figures/' + out_dir)
+LABELS_MLF_PATH = os.path.join(os.path.dirname(__file__), '../data/interim/labels.mlf')
 
-    os.mkdir('../reports/figures/' + out_dir)
+DATA_TEST_DA_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/test_D_A')
 
-    with open(scp_file, 'rt') as files_list:
+RESULTS_MLF_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/results.mlf')
+REPORT_FIGURES_DIR = os.path.join(os.path.dirname(__file__), '../../reports/figures/')
 
-        if l2 is not None:
+
+def generate_plots(out_dir, X, y1=None, y2=None):
+
+    if os.path.exists(REPORT_FIGURES_DIR + out_dir):
+        shutil.rmtree(REPORT_FIGURES_DIR + out_dir)
+
+    os.mkdir(REPORT_FIGURES_DIR + out_dir)
+
+    with open(X['script_file'], 'rt') as files_list:
+
+        if y2 is not None:
             for file in files_list.read().splitlines():
-                _, obs, delta, acc = read_data(file)
-                label1_start, label1_end, labels1 = read_mlf_label(l1['mlf'], file[-8:])
-                label2_start, label2_end, labels2 = read_mlf_label(l2['mlf'], file[-8:])
+                plot_X_y1_y2(file, out_dir, y1, y2)
 
-                f = plt.figure()
-                lw = 3
-
-                ax1 = plt.subplot2grid((14, 12), (0, 0), rowspan=10, colspan=12)
-
-                plt.pcolor(obs.values[::1, ::1].T, cmap='jet')
-                plt.clim(0, 4)
-                plt.title(pd.to_datetime(file[-8:]).strftime('%Y-%m-%d'))
-
-                ax1.axes.get_xaxis().set_visible(False)
-
-                ax2 = plt.subplot2grid((14, 12), (10, 0), rowspan=2, colspan=12)
-                ax2.plot(label1_start.index, np.ones(label1_start.index.shape[0]))
-
-                for t, label in zip(label1_end.index, label1_end.values):
-                    if label == 'equ' or label == 'ne':
-                        ax2.axvline(t, color='k', linewidth=lw)
-                    if label == 'nuc':
-                        ax2.axvline(t, color='g', linewidth=lw)
-                    if label == 'con':
-                        ax2.axvline(t, color='r', linewidth=lw)
-                    if label == 'coa':
-                        ax2.axvline(t, color='b', linewidth=lw)
-                    if label == 'dep':
-                        ax2.axvline(t, color='y', linewidth=lw)
-                    if label == 'e':
-                        ax2.axvline(t, color='c', linewidth=lw)
-
-                ax2.axes.get_yaxis().set_visible(False)
-                plt.xlim([label1_start.index[0], label1_end.index[-1]])
-
-                ax3 = plt.subplot2grid((14, 12), (12, 0), rowspan=2, colspan=12)
-                ax3.plot(label2_start.index, np.ones(label2_start.index.shape[0]))
-
-                for t, label in zip(label2_end.index, label2_end.values):
-                    if label == 'equ' or label == 'ne':
-                        ax3.axvline(t, color='k', linewidth=lw)
-                    if label == 'nuc':
-                        ax3.axvline(t, color='g', linewidth=lw)
-                    if label == 'con':
-                        ax3.axvline(t, color='r', linewidth=lw)
-                    if label == 'coa':
-                        ax3.axvline(t, color='b', linewidth=lw)
-                    if label == 'dep':
-                        ax3.axvline(t, color='y', linewidth=lw)
-                    if label == 'e':
-                        ax3.axvline(t, color='c', linewidth=lw)
-
-                ax3.axes.get_yaxis().set_visible(False)
-
-                # ax2.axes.get_xaxis().set_visible(False)
-                plt.xlim([label1_start.index[0], label1_end.index[-1]])
-                plt.savefig('../reports/figures/' + out_dir + '/' + file[-8:])
-                f.clear()
-                plt.close(f)
-
-        elif l1 is not None:
+        elif y1 is not None:
             for file in files_list.read().splitlines():
-                _, obs, delta, acc = read_data(file)
-                label_start, label_end, labels = read_mlf_label(l1['mlf'], file[-8:])
-
-                f = plt.figure()
-
-                ax1 = plt.subplot2grid((12, 12), (0, 0), rowspan=10, colspan=12)
-
-                plt.pcolor(obs.values[::1, ::1].T,  # Z axis
-                           cmap='jet')
-                # plt.colorbar()
-                plt.clim(0, 4)
-                plt.title(pd.to_datetime(file[-8:]).strftime('%Y-%m-%d'))
-
-                ax1.axes.get_xaxis().set_visible(False)
-
-                ax2 = plt.subplot2grid((12, 12), (10, 0), rowspan=2, colspan=12)
-                ax2.plot(label_start.index, np.ones(label_start.index.shape[0]))
-
-                lw = 3
-
-                for t, label in zip(label_end.index, label_end.values):
-                    if label == 'equ' or label == 'ne':
-                        ax2.axvline(t, color='k', linewidth=lw)
-                    if label == 'nuc':
-                        ax2.axvline(t, color='g', linewidth=lw)
-                    if label == 'con':
-                        ax2.axvline(t, color='r', linewidth=lw)
-                    if label == 'coa':
-                        ax2.axvline(t, color='b', linewidth=lw)
-                    if label == 'dep':
-                        ax2.axvline(t, color='y', linewidth=lw)
-                    if label == 'e':
-                        ax2.axvline(t, color='c', linewidth=lw)
-
-                ax2.axes.get_yaxis().set_visible(False)
-                # ax2.axes.get_xaxis().set_visible(False)
-                plt.xlim([label_start.index[0], label_end.index[-1]])
-                plt.savefig('../reports/figures/' + out_dir + '/' + file[-8:])
-                f.clear()
-                plt.close(f)
+                plot_X_y1(file, out_dir, y1)
 
         else:
             for file in files_list.read().splitlines():
-                _, obs, delta, acc = read_data(file)
-                f = plt.figure()
-                plt.pcolor(obs.values[::1, ::1].T,  # Z axis
-                           cmap='jet')
-                plt.colorbar()
-                plt.clim(0, 4)
-                plt.title(pd.to_datetime(file[-8:]).strftime('%Y-%m-%d'))
-                plt.savefig('../reports/figures/' + out_dir + '/' + file[-8:])
-                f.clear()
-                plt.close(f)
+                plot_X(file, out_dir)
 
     return
+
+
+def plot_X(file, out_dir=None):
+    _, obs, delta, acc = read_data(file)
+    f = plt.figure()
+    plt.pcolor(obs.values[::1, ::1].T, cmap='jet')
+    plt.colorbar()
+    plt.clim(0, 4)
+    plt.title(pd.to_datetime(file[-8:]).strftime('%Y-%m-%d'))
+
+    if out_dir is not None:
+        plt.savefig(REPORT_FIGURES_DIR + out_dir + '/' + file[-8:])
+        f.clear()
+        plt.close(f)
+    else:
+        plt.show()
+
+
+def plot_X_y1(file, out_dir, y1):
+    _, obs, delta, acc = read_data(file)
+    label_start, label_end, labels = read_mlf_label(y1['mlf'], file[-8:])
+    f = plt.figure()
+    ax1 = plt.subplot2grid((12, 12), (0, 0), rowspan=10, colspan=12)
+    plt.pcolor(obs.values[::1, ::1].T, cmap='jet')
+    plt.clim(0, 4)
+    plt.title(pd.to_datetime(file[-8:]).strftime('%Y-%m-%d'))
+    ax1.axes.get_xaxis().set_visible(False)
+    ax2 = plt.subplot2grid((12, 12), (10, 0), rowspan=2, colspan=12)
+    ax2.plot(label_start.index, np.ones(label_start.index.shape[0]))
+    lw = 3
+    for t, label in zip(label_end.index, label_end.values):
+        if label == 'equ' or label == 'ne':
+            ax2.axvline(t, color='k', linewidth=lw)
+        if label == 'nuc':
+            ax2.axvline(t, color='g', linewidth=lw)
+        if label == 'con':
+            ax2.axvline(t, color='r', linewidth=lw)
+        if label == 'coa':
+            ax2.axvline(t, color='b', linewidth=lw)
+        if label == 'dep':
+            ax2.axvline(t, color='y', linewidth=lw)
+        if label == 'e':
+            ax2.axvline(t, color='c', linewidth=lw)
+    ax2.axes.get_yaxis().set_visible(False)
+    # ax2.axes.get_xaxis().set_visible(False)
+    plt.xlim([label_start.index[0], label_end.index[-1]])
+    plt.savefig(REPORT_FIGURES_DIR + out_dir + '/' + file[-8:])
+    f.clear()
+    plt.close(f)
+
+
+def plot_X_y1_y2(file, out_dir, y1, y2):
+    _, obs, delta, acc = read_data(file)
+    label1_start, label1_end, labels1 = read_mlf_label(y1['mlf'], file[-8:])
+    label2_start, label2_end, labels2 = read_mlf_label(y2['mlf'], file[-8:])
+    f = plt.figure()
+    lw = 3
+    ax1 = plt.subplot2grid((14, 12), (0, 0), rowspan=10, colspan=12)
+    plt.pcolor(obs.values[::1, ::1].T, cmap='jet')
+    plt.clim(0, 4)
+    plt.title(pd.to_datetime(file[-8:]).strftime('%Y-%m-%d'))
+    ax1.axes.get_xaxis().set_visible(False)
+    ax2 = plt.subplot2grid((14, 12), (10, 0), rowspan=2, colspan=12)
+    ax2.plot(label1_start.index, np.ones(label1_start.index.shape[0]))
+    for t, label in zip(label1_end.index, label1_end.values):
+        if label == 'equ' or label == 'ne':
+            ax2.axvline(t, color='k', linewidth=lw)
+        if label == 'nuc':
+            ax2.axvline(t, color='g', linewidth=lw)
+        if label == 'con':
+            ax2.axvline(t, color='r', linewidth=lw)
+        if label == 'coa':
+            ax2.axvline(t, color='b', linewidth=lw)
+        if label == 'dep':
+            ax2.axvline(t, color='y', linewidth=lw)
+        if label == 'e':
+            ax2.axvline(t, color='c', linewidth=lw)
+    ax2.axes.get_yaxis().set_visible(False)
+    plt.xlim([label1_start.index[0], label1_end.index[-1]])
+    ax3 = plt.subplot2grid((14, 12), (12, 0), rowspan=2, colspan=12)
+    ax3.plot(label2_start.index, np.ones(label2_start.index.shape[0]))
+    for t, label in zip(label2_end.index, label2_end.values):
+        if label == 'equ' or label == 'ne':
+            ax3.axvline(t, color='k', linewidth=lw)
+        if label == 'nuc':
+            ax3.axvline(t, color='g', linewidth=lw)
+        if label == 'con':
+            ax3.axvline(t, color='r', linewidth=lw)
+        if label == 'coa':
+            ax3.axvline(t, color='b', linewidth=lw)
+        if label == 'dep':
+            ax3.axvline(t, color='y', linewidth=lw)
+        if label == 'e':
+            ax3.axvline(t, color='c', linewidth=lw)
+    ax3.axes.get_yaxis().set_visible(False)
+    # ax2.axes.get_xaxis().set_visible(False)
+    plt.xlim([label1_start.index[0], label1_end.index[-1]])
+    plt.savefig(REPORT_FIGURES_DIR + out_dir + '/' + file[-8:])
+    f.clear()
+    plt.close(f)
 
 
 def view_raw_file(file=None):
@@ -250,44 +251,71 @@ def raw_file_as_dndlogdp(fi):
     plt.show()
 
 
-def testDA_file(fi=None, sample=None):
+# def file(X, fi=None):
+#     if fi is None:
+#         files = open(X['script_file']).read().splitlines()
+#         fi = random.choice(files)
+#
+#     _, obs, delta, acc = read_data(fi)
+#
+#     plt.pcolor(obs.values[::1, ::1].T,  # Z axis
+#                cmap='jet')
+#     plt.colorbar()
+#     plt.show()
+
+
+def sample(fi=None):
     if fi is None:
         fi = random.choice(os.listdir('../data/interim/test_D_A/'))
 
-    _, obs, delta, acc = read_data(fi, which='interim/test_D_A')
+    _, obs, delta, acc = read_data(fi)
 
-    plt.pcolor(obs.values[::1, ::1].T,  # Z axis
-               cmap='jet')
-    plt.colorbar()
+    plt.plot(obs.iloc[sample])
+    plt.show()
+    plt.plot(delta.iloc[sample])
+    plt.show()
+    plt.plot(acc.iloc[sample])
     plt.show()
 
-    if sample is not None:
-        plt.plot(obs.iloc[sample])
-        plt.show()
-        plt.plot(delta.iloc[sample])
-        plt.show()
-        plt.plot(acc.iloc[sample])
-        plt.show()
 
-
-def trainDA_file(fi=None, sample=None):
-    if fi is None:
-        fi = random.choice(os.listdir('../data/interim/train_D_A/'))
-
-    _, obs, delta, acc = read_data(fi, which='interim/train_D_A')
-
-    plt.pcolor(obs.values[::1, ::1].T,  # Z axis
-               cmap='jet')
-    plt.colorbar()
-    plt.show()
-
-    if sample is not None:
-        plt.plot(obs.iloc[sample])
-        plt.show()
-        plt.plot(delta.iloc[sample])
-        plt.show()
-        plt.plot(acc.iloc[sample])
-        plt.show()
+# def testDA_file(fi=None, sample=None):
+#     if fi is None:
+#         fi = random.choice(os.listdir('../data/interim/test_D_A/'))
+#
+#     _, obs, delta, acc = read_data(fi)
+#
+#     plt.pcolor(obs.values[::1, ::1].T,  # Z axis
+#                cmap='jet')
+#     plt.colorbar()
+#     plt.show()
+#
+#     if sample is not None:
+#         plt.plot(obs.iloc[sample])
+#         plt.show()
+#         plt.plot(delta.iloc[sample])
+#         plt.show()
+#         plt.plot(acc.iloc[sample])
+#         plt.show()
+#
+#
+# def trainDA_file(fi=None, sample=None):
+#     if fi is None:
+#         fi = random.choice(os.listdir('../data/interim/train_D_A/'))
+#
+#     _, obs, delta, acc = read_data(fi, which='interim/train_D_A')
+#
+#     plt.pcolor(obs.values[::1, ::1].T,  # Z axis
+#                cmap='jet')
+#     plt.colorbar()
+#     plt.show()
+#
+#     if sample is not None:
+#         plt.plot(obs.iloc[sample])
+#         plt.show()
+#         plt.plot(delta.iloc[sample])
+#         plt.show()
+#         plt.plot(acc.iloc[sample])
+#         plt.show()
 
 
 def real_file(fi=None, sample=None):
@@ -414,10 +442,10 @@ def evaluate_hyperparameter_for_label(fi, hyperparameters):
 
 def evaluate_results(fi=None):
     if fi is None:
-        fi = random.choice(os.listdir('../data/interim/test_D_A/'))
+        fi = random.choice(os.listdir(DATA_TEST_DA_PATH))
 
-    result_start, result_end, results, score = read_result_label('../data/interim/results.mlf', fi)
-    label_start, label_end, labels = read_mlf_label('../data/interim/labels.mlf', fi)
+    result_start, result_end, results, score = read_result_label(RESULTS_MLF_PATH, fi)
+    label_start, label_end, labels = read_mlf_label(LABELS_MLF_PATH, fi)
 
     _, size_dist_df, delta, acc = read_data(fi)
 
@@ -558,7 +586,7 @@ def read_mlf_label(mlf, date):
 
 
 if __name__ == '__main__':
-    data = {'script_file': '../data/interim/test.scp', 'count': 543, 'id': '2.test.synth'}
+    data = {'script_file': '../data/interim/test.synth.scp', 'count': 543, 'id': '2.test.synth.synth'}
     labels = {'mlf': '../data/interim/labels.mlf'}
     results = {'mlf': '../data/interim/results.mlf'}
     generate_plots(data, labels, results)
