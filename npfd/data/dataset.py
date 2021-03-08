@@ -34,6 +34,16 @@ REPORT_FIGURES_DIR = os.path.join(os.path.dirname(__file__), '../../reports/figu
 
 RAW_SIMULATION_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/simulation/')
 
+ADAPT_FILES = ['20170115.cle',
+               '20170204.cle',
+               '20170324.cle',
+               '20171117.cle',
+               '20171225.cle',
+               '20170220.cle',
+               '20170130.cle',
+               '20171202.cle',
+               ]
+
 
 def make_dataset(hyperparameters, clean_interim_dir = False, test_size=0.1):
     r"""Generates data files
@@ -77,7 +87,7 @@ def make_dataset(hyperparameters, clean_interim_dir = False, test_size=0.1):
     return X_train, X_test, y_train, y_test
 
 
-def read_raw_dmps(skip_invalid_day=True, clean_existing_data=True, test_size=0.1):
+def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.1):
     train_data_path = os.path.join(INTERIM_DATA_DIR, 'train.synth.real')
     test_data_path = os.path.join(INTERIM_DATA_DIR, 'test.synth.real')
     train_D_A_data_path = os.path.join(INTERIM_DATA_DIR, 'train_D_A.real')
@@ -102,10 +112,11 @@ def read_raw_dmps(skip_invalid_day=True, clean_existing_data=True, test_size=0.1
             pass
 
     labels = pd.read_csv(EVENT_CLASSIFICATION_CSV_PATH, index_col=0)
-
+    labels.index = pd.to_datetime(labels.index)
     count = 0
     for file in os.listdir(RAW_DMPS_PATH):
         if file.endswith('.cle'):
+
             nukdata = pd.read_csv(RAW_DMPS_PATH + file, sep=r'\s+')
             nukdata = nukdata.replace(np.nan, -999)
             nukdata.index = nukdata.iloc[:, 0].apply(decimalDOY2datetime)
@@ -122,7 +133,8 @@ def read_raw_dmps(skip_invalid_day=True, clean_existing_data=True, test_size=0.1
             file = file.replace('dm', '')
 
             # Split data, 90% for training, 10% for testing
-            if np.random.rand() < test_size:
+            # if np.random.rand() < test_size:
+            if file not in ADAPT_FILES:
                 fo = os.path.join(test_data_path, file[:-4])
                 fo_label = os.path.join(LABEL_REAL_TEST_PATH, file[:-4])
                 fo_D_A = fo.replace('test.synth', 'test_D_A')
@@ -131,13 +143,15 @@ def read_raw_dmps(skip_invalid_day=True, clean_existing_data=True, test_size=0.1
                 fo_label = os.path.join(LABEL_REAL_TRAIN_PATH, file[:-4])
                 fo_D_A = fo.replace('train.synth', 'train_D_A')
 
-            labels.index = pd.to_datetime(labels.index)
-            # Get labels
-            start = datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8]))
-            end = (datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8])) + datetime.timedelta(days=1))
-            # start = datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8])).strftime("%Y-%m-%d")
-            # end = (datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8])) + datetime.timedelta(days=1, minutes=1)).strftime("%Y-%m-%d")
-            day_labels = labels.loc[start:end]
+            # labels.index = pd.to_datetime(labels.index)
+            # # Get labels
+            # start = datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8]))
+            # end = (datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8])) + datetime.timedelta(days=1))
+            # day_labels = labels.loc[start:end]
+
+            day_labels = labels.loc[nukdata.index]
+
+            day_labels.where(nukdata.min(axis=1) != -999, 'na', inplace=True)
 
             # # Write labels to file
             write_label(fo_label, day_labels)

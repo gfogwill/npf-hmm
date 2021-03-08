@@ -5,8 +5,7 @@ from datetime import datetime, timedelta
 from scipy.optimize import curve_fit
 
 
-TEST_REAL_FILES = ['DM20171115.cle',
-                   'DM20170507.cle',
+TEST_REAL_FILES = ['DM20170507.cle',
                    'DM20170508.cle',
                    'DM20170523.cle',
                    'DM20170524.cle',

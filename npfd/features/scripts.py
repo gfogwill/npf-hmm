@@ -25,7 +25,7 @@ from verta import Client
 HOST = "http://127.0.0.1:3000/"
 
 PROJECT_NAME = "NPF Detector"
-EXPERIMENT_NAME = "Automated Test - 21/01/2021"
+EXPERIMENT_NAME = "Automated Test - 25/01/2021"
 EXPERIMENT_DESCRIPTION = "minimum variance disabled when adapting"
 
 
@@ -48,6 +48,8 @@ def train_evaluate(search_params):
               'nuc_threshold': 0.15,  # 1/cm3/10min
               'pos_vol_threshold': 200,  # 1/m3^3/10min
               'neg_vol_threshold': -5000,  # 1/cm3/10min
+              'word_insertion_penalty': 0.0,
+              'grammar_scale_factor': 0.0,
               **search_params}
 
     run.log_hyperparameters(params)
@@ -55,7 +57,7 @@ def train_evaluate(search_params):
     X_train, X_val, y_train, y_val = data.dataset.make_dataset(params, clean_interim_dir=False)
 
     params['raw_data_source'] = 'real'
-    X_adapt, X_final, y_adapt, y_final = data.dataset.make_dataset(params, test_size=0.5)
+    X_adapt, X_final, y_adapt, y_final = data.dataset.make_dataset(params, test_size=0.2)
 
     model = HiddenMarkovModel()
 
@@ -69,13 +71,26 @@ def train_evaluate(search_params):
     model.edit(edit_commands)
     model.train(X_train, y_train, params)
 
+    edit_commands = ['MU 4 {*.state[2-4].mix}']
+
+    model.edit(edit_commands)
+    model.train(X_train, y_train, params)
+
+    edit_commands = ['MU 8 {*.state[2-4].mix}']
+
+    model.edit(edit_commands)
+    model.train(X_train, y_train, params)
+
     # results = model.test.synth(X_adapt, y_adapt)
 
     model.adapt(X_adapt, y_adapt, params)
 
     results = model.test(X_final, y_final, params)
 
-    score = results['WORD_Corr']
+    try:
+        score = results['WORD_Acc']
+    except KeyError:
+        score = 0
 
     run.log_metric('correct_labels', score)
 
