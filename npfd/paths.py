@@ -18,7 +18,7 @@ hmm_model_path = model_path / 'hmm'
 trained_model_path = model_path / 'trained'
 model_output_path = model_path / 'outputs'
 
-htk_misc_dir = model_path / 'HTK' / 'misc'
+htk_misc_dir = src_module_dir / 'models/HTK/misc'
 
 analysis_path = project_dir / 'reports'
 summary_path = analysis_path / 'summary'

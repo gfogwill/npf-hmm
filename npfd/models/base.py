@@ -2,20 +2,21 @@ import logging
 
 from npfd.models.HTK import htktools as htkt
 
-from ..paths import htk_misc_dir, hmm_model_path, interim_data_path, model_path
+from ..paths import htk_misc_dir, hmm_model_path, interim_data_path, model_path, src_module_dir
 
 
 class HiddenMarkovModel(object):
-    def __init__(self, **model_hyper_parameters):
+    def __init__(self):
         self.adapted = False
         self._params = None
         self.most_trained_model = None
+        self.variance_floor = None
 
     def initialize(self, data, hyperparameters):
         htkt.clean_models()
 
         logging.info("Initializing model...")
-
+        logging.info(htk_misc_dir)
         if hyperparameters['init_metho'] == 'HCompV':
             htkt.HCompV(['-C', htk_misc_dir / 'config',
                          '-S', data['script_file'],
@@ -138,7 +139,7 @@ class HiddenMarkovModel(object):
         if monophones_file is None:
             monophones_file = htk_misc_dir / 'monophones'
             
-        with open(model_path / 'HTK/tmp/cmds.hed', 'wt') as cmd_file:
+        with open(src_module_dir / 'models/HTK/tmp/cmds.hed', 'wt') as cmd_file:
             for command in commands:
                 cmd_file.write(command + '\n')
 
@@ -146,7 +147,7 @@ class HiddenMarkovModel(object):
                    '-H', hmm_model_path / str(self.most_trained_model) / 'hmmdefs',
                    '-M', hmm_model_path / str(self.most_trained_model + 1),
                    '-T', 1,
-                   model_path / 'HTK/tmp/cmds.hed',
+                   src_module_dir / 'models/HTK/tmp/cmds.hed',
                    monophones_file])
 
         self.most_trained_model += 1
@@ -185,7 +186,6 @@ class HiddenMarkovModel(object):
         return self.most_trained_model
 
     def predict(self, data, hyperparameters,
-                misc_path=None,
                 config_file=None,
                 wdnet_file=None,
                 monophones_file=None,

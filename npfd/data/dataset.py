@@ -9,12 +9,10 @@ from npfd.data.size_distribution import cm3_to_dndlogdp, decimalDOY2datetime
 from npfd.data.htk import write_data
 from npfd.data.labels import get_labels_ene, get_labels_nccd, write_label, master_label_file, dmps_master_label_file
 
-from ..paths import raw_data_path, interim_data_path
+from ..paths import raw_data_path, interim_data_path, figures_path, htk_misc_dir
 
 DMPS_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/dmps/dmps_mbio_2015/DATA/')
 RAW_DMPS_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/dmps/inv/')
-
-CONFIG_HCOPY_FILE_PATH = os.path.join(os.path.dirname(__file__), '../models/HTK/misc/config.hcopy')
 
 TEST_SCP = os.path.join(os.path.dirname(__file__), '../../data/interim/test.scp')
 TEST_HCOPY_SCP = os.path.join(os.path.dirname(__file__), '../../data/interim/test_hcopy.scp')
@@ -30,7 +28,6 @@ LABEL_TRAIN_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/l
 LABEL_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_test')
 LABEL_REAL_TRAIN_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_real_train')
 LABEL_REAL_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_real_test')
-REPORT_FIGURES_DIR = os.path.join(os.path.dirname(__file__), '../../reports/figures')
 
 RAW_SIMULATION_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/malte-uhma/')
 
@@ -158,7 +155,7 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
 
             write_data(fo, np.log10(np.absolute(nukdata + 10)))
 
-            HCopy([fo, fo_D_A, '-C', CONFIG_HCOPY_FILE_PATH])
+            HCopy([fo, fo_D_A, '-C', htk_misc_dir / 'config.hcopy'])
 
             # scp_file.write(fo_D_A + '\n')
             count += 1
@@ -234,13 +231,13 @@ def read_raw_simulations(params, test_size=0.1):
 
     logging.info('Adding deltas and acelerations...')
 
-    test_count = HCopy(['-C', CONFIG_HCOPY_FILE_PATH,
+    test_count = HCopy(['-C', htk_misc_dir / 'config.hcopy',
                         '-S', TEST_HCOPY_SCP,
                         '-T', 1])
     logging.info("Test files:\t" + str(test_count))
 
     # Train
-    train_count = HCopy(['-C', CONFIG_HCOPY_FILE_PATH,
+    train_count = HCopy(['-C', htk_misc_dir / 'config.hcopy',
                          '-S', TRAIN_HCOPY_SCP,
                          '-T', 1])
     logging.info("Train files:\t" + str(train_count))
@@ -256,7 +253,7 @@ def read_raw_simulations(params, test_size=0.1):
 
 def clean_interim():
     clean_dir(interim_data_path)
-    clean_dir(REPORT_FIGURES_DIR)
+    clean_dir(figures_path)
 
     os.mkdir(LABEL_TEST_PATH)
     os.mkdir(LABEL_TRAIN_PATH)
