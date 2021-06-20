@@ -9,7 +9,8 @@ from npfd.data.size_distribution import cm3_to_dndlogdp, decimalDOY2datetime
 from npfd.data.htk import write_data
 from npfd.data.labels import get_labels_ene, get_labels_nccd, write_label, master_label_file, dmps_master_label_file
 
-EVENT_CLASSIFICATION_CSV_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/dmps/event_classification.csv')
+from ..paths import raw_data_path, interim_data_path
+
 DMPS_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/dmps/dmps_mbio_2015/DATA/')
 RAW_DMPS_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/dmps/inv/')
 
@@ -29,10 +30,9 @@ LABEL_TRAIN_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/l
 LABEL_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_test')
 LABEL_REAL_TRAIN_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_real_train')
 LABEL_REAL_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_real_test')
-INTERIM_DATA_DIR = os.path.join(os.path.dirname(__file__), '../../data/interim/')
 REPORT_FIGURES_DIR = os.path.join(os.path.dirname(__file__), '../../reports/figures')
 
-RAW_SIMULATION_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/simulation/')
+RAW_SIMULATION_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/malte-uhma/')
 
 ADAPT_FILES = ['20170115.cle',
                '20170204.cle',
@@ -45,14 +45,14 @@ ADAPT_FILES = ['20170115.cle',
                ]
 
 
-def make_dataset(hyperparameters, clean_interim_dir = False, test_size=0.1):
+def make_dataset(hyperparameters, clean_interim_dir=False, test_size=0.1):
     r"""Generates data files
 
     Long description
 
     Parameters
     ----------
-    which : {'simulation', 'real'}, optional
+    which : {'malte-uhma', 'real'}, optional
         Choices in brackets, default first when optional.
     *args : iterable
         Other arguments.
@@ -66,15 +66,14 @@ def make_dataset(hyperparameters, clean_interim_dir = False, test_size=0.1):
 
     Examples
     --------
-
     """
 
     # Remove all files from interim directory
     if clean_interim_dir:
         clean_interim()
 
-    if hyperparameters['raw_data_source'] == 'simulation':
-        logging.info('Converting simulation raw files to HTK format ...')
+    if hyperparameters['raw_data_source'] == 'malte-uhma':
+        logging.info('Converting malte-uhma raw files to HTK format ...')
         X_train, X_test, y_train, y_test = read_raw_simulations(hyperparameters, test_size)
 
     elif hyperparameters['raw_data_source'] == 'real':
@@ -88,13 +87,13 @@ def make_dataset(hyperparameters, clean_interim_dir = False, test_size=0.1):
 
 
 def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.1):
-    train_data_path = os.path.join(INTERIM_DATA_DIR, 'train.synth.real')
-    test_data_path = os.path.join(INTERIM_DATA_DIR, 'test.synth.real')
-    train_D_A_data_path = os.path.join(INTERIM_DATA_DIR, 'train_D_A.real')
-    test_D_A_data_path = os.path.join(INTERIM_DATA_DIR, 'test_D_A.real')
+    train_data_path = os.path.join(interim_data_path, 'train.synth.real')
+    test_data_path = os.path.join(interim_data_path, 'test.synth.real')
+    train_D_A_data_path = os.path.join(interim_data_path, 'train_D_A.real')
+    test_D_A_data_path = os.path.join(interim_data_path, 'test_D_A.real')
 
-    train_scp_file = os.path.join(INTERIM_DATA_DIR, 'train_D_A.real.scp')
-    test_scp_file = os.path.join(INTERIM_DATA_DIR, 'test_D_A.real.scp')
+    train_scp_file = os.path.join(interim_data_path, 'train_D_A.real.scp')
+    test_scp_file = os.path.join(interim_data_path, 'test_D_A.real.scp')
 
     try:
         os.mkdir(train_data_path)
@@ -111,9 +110,10 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
         else:
             pass
 
-    labels = pd.read_csv(EVENT_CLASSIFICATION_CSV_PATH, index_col=0)
+    labels = pd.read_csv(raw_data_path / 'dmps' / 'event_classification.csv', index_col=0)
     labels.index = pd.to_datetime(labels.index)
     count = 0
+
     for file in os.listdir(RAW_DMPS_PATH):
         if file.endswith('.cle'):
 
@@ -133,8 +133,8 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
             file = file.replace('dm', '')
 
             # Split data, 90% for training, 10% for testing
-            # if np.random.rand() < test_size:
-            if file not in ADAPT_FILES:
+            if np.random.rand() < test_size:
+            # if file not in ADAPT_FILES:
                 fo = os.path.join(test_data_path, file[:-4])
                 fo_label = os.path.join(LABEL_REAL_TEST_PATH, file[:-4])
                 fo_D_A = fo.replace('test.synth', 'test_D_A')
@@ -149,7 +149,7 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
             # end = (datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8])) + datetime.timedelta(days=1))
             # day_labels = labels.loc[start:end]
 
-            day_labels = labels.loc[nukdata.index]
+            day_labels = labels.loc[nukdata.index[0]:nukdata.index[0]+datetime.timedelta(days=1)]
 
             day_labels.where(nukdata.min(axis=1) != -999, 'na', inplace=True)
 
@@ -157,6 +157,7 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
             write_label(fo_label, day_labels)
 
             write_data(fo, np.log10(np.absolute(nukdata + 10)))
+
             HCopy([fo, fo_D_A, '-C', CONFIG_HCOPY_FILE_PATH])
 
             # scp_file.write(fo_D_A + '\n')
@@ -165,13 +166,13 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
     train_labels, test_labels = dmps_master_label_file()
 
     with open(train_scp_file, 'wt') as fi:
-        for file in os.listdir(os.path.join(INTERIM_DATA_DIR, 'train_D_A.real')):
-            line = os.path.join(os.path.join(INTERIM_DATA_DIR, 'train_D_A.real'), file) + '\n'
+        for file in os.listdir(os.path.join(interim_data_path, 'train_D_A.real')):
+            line = os.path.join(os.path.join(interim_data_path, 'train_D_A.real'), file) + '\n'
             fi.write(line)
 
     with open(test_scp_file, 'wt') as fi:
-        for file in os.listdir(os.path.join(INTERIM_DATA_DIR, 'test_D_A.real')):
-            line = os.path.join(os.path.join(INTERIM_DATA_DIR, 'test_D_A.real'), file) + '\n'
+        for file in os.listdir(os.path.join(interim_data_path, 'test_D_A.real')):
+            line = os.path.join(os.path.join(interim_data_path, 'test_D_A.real'), file) + '\n'
             fi.write(line)
 
     X_train = {'script_file': train_scp_file, 'count': 1, 'id': 'train_D_A.real'}
@@ -216,10 +217,10 @@ def read_raw_simulations(params, test_size=0.1):
 
                 # Split data, 90% for training, 10% for testing
                 if np.random.rand() < test_size:
-                    fo = os.path.join(INTERIM_DATA_DIR, 'test.synth', file_name[2:])
+                    fo = os.path.join(interim_data_path, 'test.synth', file_name[2:])
                     fo_label = os.path.join(LABEL_TEST_PATH, file_name[2:])
                 else:
-                    fo = os.path.join(INTERIM_DATA_DIR, 'train.synth', file_name[2:])
+                    fo = os.path.join(interim_data_path, 'train.synth', file_name[2:])
                     fo_label = os.path.join(LABEL_TRAIN_PATH, file_name[2:])
 
                 # Write data
@@ -254,7 +255,7 @@ def read_raw_simulations(params, test_size=0.1):
 
 
 def clean_interim():
-    clean_dir(INTERIM_DATA_DIR)
+    clean_dir(interim_data_path)
     clean_dir(REPORT_FIGURES_DIR)
 
     os.mkdir(LABEL_TEST_PATH)
@@ -292,84 +293,6 @@ def gen_scp_files():
 
     return TRAIN_SCP, TEST_SCP
 
-
-
-
-# def read_raw_dmps_old(skip_invalid_day=True):
-#     train_id = '2017.train.synth.real'
-#
-#     scp_file_name = INTERIM_DATA_DIR + train_id.replace('train.synth', 'train_D_A') + '.scp'
-#
-#     try:
-#         os.mkdir(os.path.join(INTERIM_DATA_DIR, train_id.replace('train.synth', 'train_D_A')))
-#         os.mkdir(os.path.join(INTERIM_DATA_DIR, train_id))
-#     except FileExistsError:
-#         # pass
-#         with open(scp_file_name, 'wt') as scp_file:
-#             count = 0
-#             for file in os.listdir(DMPS_TRAIN_PATH):
-#
-#                 if file.endswith('.cle'):
-#                     nukdata = pd.read_csv(DMPS_TRAIN_PATH + file, sep=r'\s+')
-#                     nukdata = nukdata.replace(np.nan, -999)
-#                     nukdata.index = nukdata.iloc[:, 0].apply(decimalDOY2datetime)
-#
-#                     # TODO: change ffill
-#                     # nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').ffill()
-#                     nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').mean()
-#                     nukdata = nukdata.replace(np.nan, -999)
-#
-#                     if skip_invalid_day or nukdata.isin([-999]).any().any():
-#                         continue
-#
-#                     file = file.replace('DM', '')
-#                     file = file.replace('dm', '')
-#
-#                     fo = os.path.join(INTERIM_DATA_DIR, train_id, file[:-4])
-#                     fo_D_A = fo.replace('train.synth', 'train_D_A')
-#
-#                     write_data(fo, np.log10(np.absolute(nukdata + 10)))
-#                     HCopy([fo, fo_D_A, '-C', CONFIG_HCOPY_FILE_PATH])
-#
-#                     scp_file.write(fo_D_A + '\n')
-#                     count += 1
-#
-#     X_train = {'script_file': scp_file_name, 'count': 1, 'id': train_id.replace('train.synth', 'train_D_A')}
-#
-#     test_id = '2015.test.synth.real'
-#     try:
-#         os.mkdir(os.path.join(INTERIM_DATA_DIR, test_id.replace('test.synth', 'test_D_A')))
-#         os.mkdir(os.path.join(INTERIM_DATA_DIR, test_id))
-#     except FileExistsError:
-#         pass
-#
-#     scp_file_name = INTERIM_DATA_DIR + test_id.replace('test.synth', 'test_D_A') + '.scp'
-#     with open(scp_file_name, 'wt') as scp_file:
-#         count = 0
-#         for file in os.listdir(DMPS_TEST_PATH):
-#             if file.endswith('.cle'):
-#                 nukdata = pd.read_csv(DMPS_TEST_PATH + file, sep=r'\s+')
-#                 nukdata = nukdata.replace(np.nan, -999)
-#                 nukdata.index = nukdata.iloc[:, 0].apply(decimalDOY2datetime)
-#                 nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').mean()
-#                 nukdata = nukdata.replace(np.nan, -999)
-#
-#                 if nukdata.isin([-999]).any().any():
-#                     continue
-#
-#                 file = file.replace('DM', '')
-#                 file = file.replace('dm', '')
-#                 fo = os.path.join(INTERIM_DATA_DIR, test_id, file[:-4])
-#                 fo_D_A = fo.replace('test.synth', 'test_D_A')
-#                 write_data(fo, np.log10(np.absolute(nukdata + 10)))
-#                 HCopy([fo, fo_D_A, '-C', CONFIG_HCOPY_FILE_PATH])
-#
-#                 scp_file.write(fo_D_A + '\n')
-#                 count += 1
-#     X_test = {'script_file': scp_file_name, 'count': count, 'id': test_id.replace('test.synth', 'test_D_A')}
-#
-#     return X_train, X_test
-
 if __name__ == '__main__':
     SEARCH_PARAMS = {'normalize': True,
                      'data_version': '2',
@@ -386,7 +309,7 @@ if __name__ == '__main__':
                      }
 
     hyperparameters = {'init_metho': 'HCompV',
-              'raw_data_source': 'simulation',
+              'raw_data_source': 'malte-uhma',
               **SEARCH_PARAMS}
 
     read_raw_dmps()

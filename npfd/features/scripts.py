@@ -39,7 +39,7 @@ def train_evaluate(search_params):
     run = client.set_experiment_run(desc=EXPERIMENT_DESCRIPTION)
 
     params = {'init_metho': 'HCompV',
-              'raw_data_source': 'simulation',
+              'raw_data_source': 'malte-uhma',
               'normalize': True,
               'data_version': '2',
 

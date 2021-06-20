@@ -17,7 +17,7 @@ DMPS_TRAIN_LABELS_MLF = os.path.join(os.path.dirname(__file__), '../../data/inte
 DMPS_LABEL_TRAIN_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_real_train')
 DMPS_LABEL_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_real_test')
 
-RAW_SIMULATION_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/simulation/')
+RAW_SIMULATION_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/malte-uhma/')
 LABELS_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels')
 RAW_DATA_DIR = os.path.join(os.path.dirname(__file__), '../../data/raw/')
 

@@ -14,21 +14,20 @@ from npfd.data.labels import get_labels_ene
 
 import shutil
 
+from ..paths import figures_path
+
 
 LABELS_MLF_PATH = os.path.join(os.path.dirname(__file__), '../data/interim/labels.mlf')
-
 DATA_TEST_DA_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/test_D_A')
-
 RESULTS_MLF_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/results.mlf')
-REPORT_FIGURES_DIR = os.path.join(os.path.dirname(__file__), '../../reports/figures/')
 
 
 def generate_plots(out_dir, X, y1=None, y2=None):
 
-    if os.path.exists(REPORT_FIGURES_DIR + out_dir):
-        shutil.rmtree(REPORT_FIGURES_DIR + out_dir)
+    if os.path.exists(figures_path + out_dir):
+        shutil.rmtree(figures_path + out_dir)
 
-    os.mkdir(REPORT_FIGURES_DIR + out_dir)
+    os.mkdir(figures_path + out_dir)
 
     with open(X['script_file'], 'rt') as files_list:
 
@@ -56,7 +55,7 @@ def plot_X(file, out_dir=None):
     plt.title(pd.to_datetime(file[-8:]).strftime('%Y-%m-%d'))
 
     if out_dir is not None:
-        plt.savefig(REPORT_FIGURES_DIR + out_dir + '/' + file[-8:])
+        plt.savefig(figures_path + out_dir + '/' + file[-8:])
         f.clear()
         plt.close(f)
     else:
@@ -88,10 +87,12 @@ def plot_X_y1(file, out_dir, y1):
             ax2.axvline(t, color='y', linewidth=lw)
         if label == 'e':
             ax2.axvline(t, color='c', linewidth=lw)
+        if label == 'na':
+            ax2.axvline(t, color='w', linewidth=lw)
     ax2.axes.get_yaxis().set_visible(False)
     # ax2.axes.get_xaxis().set_visible(False)
     plt.xlim([label_start.index[0], label_end.index[-1]])
-    plt.savefig(REPORT_FIGURES_DIR + out_dir + '/' + file[-8:])
+    plt.savefig(figures_path + out_dir + '/' + file[-8:])
     plt.show()
     f.clear()
     plt.close(f)
@@ -143,7 +144,7 @@ def plot_X_y1_y2(file, out_dir, y1, y2):
     ax3.axes.get_yaxis().set_visible(False)
     # ax2.axes.get_xaxis().set_visible(False)
     plt.xlim([label1_start.index[0], label1_end.index[-1]])
-    plt.savefig(REPORT_FIGURES_DIR + out_dir + '/' + file[-8:])
+    plt.savefig(figures_path + out_dir + '/' + file[-8:])
     f.clear()
     plt.close(f)
 
@@ -231,7 +232,7 @@ def evaluate_hyperparameter_for_label_debug(fi, kwargs):
 
 
 def raw_file(fi):
-    size_dist_df = pd.read_hdf('../data/raw/simulation/' + fi, key='obs/particle')
+    size_dist_df = pd.read_hdf('../data/raw/malte-uhma/' + fi, key='obs/particle')
 
     plt_dim = (12, 12)
 
@@ -242,7 +243,7 @@ def raw_file(fi):
 
 
 def raw_file_as_dndlogdp(fi):
-    size_dist_df = pd.read_hdf('../data/raw/simulation/' + fi, key='obs/particle')
+    size_dist_df = pd.read_hdf('../data/raw/malte-uhma/' + fi, key='obs/particle')
 
     dndlogdp_df = cm3_to_dndlogdp(size_dist_df / 1e6)
 
