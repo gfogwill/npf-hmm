@@ -13,7 +13,6 @@ from npfd.data.labels import get_labels_ene, get_labels_nccd, write_label, maste
 from ..paths import raw_data_path, interim_data_path, figures_path, htk_misc_dir
 
 DMPS_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/dmps/dmps_mbio_2015/DATA/')
-RAW_DMPS_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/dmps/inv/')
 
 TEST_SCP = os.path.join(os.path.dirname(__file__), '../../data/interim/test.scp')
 TEST_HCOPY_SCP = os.path.join(os.path.dirname(__file__), '../../data/interim/test_hcopy.scp')
@@ -43,14 +42,14 @@ ADAPT_FILES = ['20170115.cle',
                ]
 
 
-def make_dataset(hyperparameters, clean_interim_dir=False, test_size=0.1):
+def make_dataset(dataset_name=None, clean_interim_dir=False, test_size=0.1):
     r"""Generates data files
 
     Long description
 
     Parameters
     ----------
-    which : {'malte-uhma', 'real'}, optional
+    dataset_name : {'malte-uhma', 'real'}, optional
         Choices in brackets, default first when optional.
     *args : iterable
         Other arguments.
@@ -62,24 +61,20 @@ def make_dataset(hyperparameters, clean_interim_dir=False, test_size=0.1):
     X :
     y :
 
-    Examples
-    --------
     """
 
     # Remove all files from interim directory
     if clean_interim_dir:
         clean_interim()
 
-    if hyperparameters['raw_data_source'] == 'malte-uhma':
+    if dataset_name == 'malte-uhma':
         logging.info('Converting malte-uhma raw files to HTK format ...')
-        X_train, X_test, y_train, y_test = read_raw_simulations(hyperparameters, test_size)
-
-    elif hyperparameters['raw_data_source'] == 'real':
+        X_train, X_test, y_train, y_test = read_raw_simulations(test_size)
+    elif dataset_name == 'dmps':
         logging.info('Converting real raw files to HTK format ...')
         X_train, X_test, y_train, y_test = read_raw_dmps(test_size=test_size)
-
     else:
-        raise ValueError("Invalid option: " + hyperparameters['raw_data_source'])
+        raise ValueError("Invalid option: " + dataset_name)
 
     return X_train, X_test, y_train, y_test
 
@@ -112,54 +107,51 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
     labels.index = pd.to_datetime(labels.index)
     count = 0
 
-    for file in os.listdir(RAW_DMPS_PATH):
-        if file.endswith('.cle'):
+    for file in (raw_data_path / 'dmps/inv').glob('*.cle'):
+        nukdata = pd.read_csv(raw_data_path / 'dmps/inv' / file, sep=r'\s+')
+        nukdata = nukdata.replace(np.nan, -999)
+        nukdata.index = nukdata.iloc[:, 0].apply(decimalDOY2datetime)
 
-            nukdata = pd.read_csv(RAW_DMPS_PATH + file, sep=r'\s+')
-            nukdata = nukdata.replace(np.nan, -999)
-            nukdata.index = nukdata.iloc[:, 0].apply(decimalDOY2datetime)
+        # TODO: change ffill
+        # nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').ffill()
+        nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').mean()
+        nukdata = nukdata.replace(np.nan, -999)
 
-            # TODO: change ffill
-            # nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').ffill()
-            nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').mean()
-            nukdata = nukdata.replace(np.nan, -999)
+        if skip_invalid_day and nukdata.isin([-999]).any().any():
+            continue
 
-            if skip_invalid_day and nukdata.isin([-999]).any().any():
-                continue
+        file = file.replace('DM', '')
+        file = file.replace('dm', '')
 
-            file = file.replace('DM', '')
-            file = file.replace('dm', '')
+        # Split data, 90% for training, 10% for testing
+        if np.random.rand() < test_size:
+            fo = os.path.join(test_data_path, file[:-4])
+            fo_label = os.path.join(LABEL_REAL_TEST_PATH, file[:-4])
+            fo_D_A = fo.replace('test.synth', 'test_D_A')
+        else:
+            fo = os.path.join(train_data_path, file[:-4])
+            fo_label = os.path.join(LABEL_REAL_TRAIN_PATH, file[:-4])
+            fo_D_A = fo.replace('train.synth', 'train_D_A')
 
-            # Split data, 90% for training, 10% for testing
-            if np.random.rand() < test_size:
-            # if file not in ADAPT_FILES:
-                fo = os.path.join(test_data_path, file[:-4])
-                fo_label = os.path.join(LABEL_REAL_TEST_PATH, file[:-4])
-                fo_D_A = fo.replace('test.synth', 'test_D_A')
-            else:
-                fo = os.path.join(train_data_path, file[:-4])
-                fo_label = os.path.join(LABEL_REAL_TRAIN_PATH, file[:-4])
-                fo_D_A = fo.replace('train.synth', 'train_D_A')
+        # labels.index = pd.to_datetime(labels.index)
+        # # Get labels
+        # start = datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8]))
+        # end = (datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8])) + datetime.timedelta(days=1))
+        # day_labels = labels.loc[start:end]
 
-            # labels.index = pd.to_datetime(labels.index)
-            # # Get labels
-            # start = datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8]))
-            # end = (datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8])) + datetime.timedelta(days=1))
-            # day_labels = labels.loc[start:end]
+        day_labels = labels.loc[nukdata.index[0]:nukdata.index[0]+datetime.timedelta(days=1)]
 
-            day_labels = labels.loc[nukdata.index[0]:nukdata.index[0]+datetime.timedelta(days=1)]
+        day_labels.where(nukdata.min(axis=1) != -999, 'na', inplace=True)
 
-            day_labels.where(nukdata.min(axis=1) != -999, 'na', inplace=True)
+        # # Write labels to file
+        write_label(fo_label, day_labels)
 
-            # # Write labels to file
-            write_label(fo_label, day_labels)
+        write_data(fo, np.log10(np.absolute(nukdata + 10)))
 
-            write_data(fo, np.log10(np.absolute(nukdata + 10)))
+        HCopy([fo, fo_D_A, '-C', htk_misc_dir / 'config.hcopy'])
 
-            HCopy([fo, fo_D_A, '-C', htk_misc_dir / 'config.hcopy'])
-
-            # scp_file.write(fo_D_A + '\n')
-            count += 1
+        # scp_file.write(fo_D_A + '\n')
+        count += 1
 
     train_labels, test_labels = dmps_master_label_file()
 
@@ -182,7 +174,7 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
     return X_train, X_test, y_train, y_test
 
 
-def read_raw_simulations(params, test_size=0.1, data_version=2, normalize=True, label_type='event-noevent'):
+def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_type='event-noevent'):
     """ Generate data files to be used by HTK
 
     Notes
@@ -208,7 +200,7 @@ def read_raw_simulations(params, test_size=0.1, data_version=2, normalize=True, 
             labels = get_labels_ene(file)
 
         elif label_type == 'nccd':
-            labels = get_labels_nccd(file, params)
+            labels = get_labels_nccd(file)
 
         # Split data, 90% for training, 10% for testing
         if np.random.rand() < test_size:
@@ -225,6 +217,7 @@ def read_raw_simulations(params, test_size=0.1, data_version=2, normalize=True, 
         write_label(fo_label, labels)
 
     train_file, test_file = gen_scp_files()
+
     train_label_file, test_label_file = master_label_file()
 
     logging.info('Adding deltas and acelerations...')

@@ -24,10 +24,10 @@ RESULTS_MLF_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/r
 
 def generate_plots(out_dir, X, y1=None, y2=None):
 
-    if os.path.exists(figures_path + out_dir):
-        shutil.rmtree(figures_path + out_dir)
+    if os.path.exists(figures_path / out_dir):
+        shutil.rmtree(figures_path / out_dir)
 
-    os.mkdir(figures_path + out_dir)
+    os.mkdir(figures_path / out_dir)
 
     with open(X['script_file'], 'rt') as files_list:
 
@@ -144,7 +144,7 @@ def plot_X_y1_y2(file, out_dir, y1, y2):
     ax3.axes.get_yaxis().set_visible(False)
     # ax2.axes.get_xaxis().set_visible(False)
     plt.xlim([label1_start.index[0], label1_end.index[-1]])
-    plt.savefig(figures_path + out_dir + '/' + file[-8:])
+    plt.savefig(figures_path / out_dir / file[-8:])
     f.clear()
     plt.close(f)
 

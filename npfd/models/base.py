@@ -131,6 +131,7 @@ class HiddenMarkovModel(object):
                                interim_data_path / out_mlf_file])
 
         r['mlf'] = interim_data_path / out_mlf_file
+
         return r
 
     def edit(self, commands, monophones_file=None):

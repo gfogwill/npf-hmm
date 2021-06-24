@@ -126,7 +126,7 @@ def HCopy(args, print_output=False):
     if print_output:
         print(output.decode())
 
-    return output.split().__len__()
+    return output.split().__len__() / 3
 
 
 def HERest(args, print_output=True):
