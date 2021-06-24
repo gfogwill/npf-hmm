@@ -72,8 +72,8 @@ def make_labels(thresholds, how='event-noevent', data_version=2):
     return results
 
 
-def get_labels_ene(fi, hyperparameters):
-    """Generate labels
+def get_labels_ene(fi, nuc_threshold=0.15, pos_vol_threshold=200, neg_vol_threshold=-5000):
+    """Generate event/no-event labels
 
     Generate the labels corresponding to a specific file.
 
@@ -81,13 +81,16 @@ def get_labels_ene(fi, hyperparameters):
     ----------
     fi : file
         Description of arg1
-    thresholds : float
+    nuc_threshold : float
         Threshold used to detect nucleation event
-
+    pos_vol_threshold : float
+        Threshold used to detect nucleation event
+    neg_vol_threshold : float
+        Threshold used to detect nucleation event
     Returns
     -------
     bool
-        Description of return value
+        DataFrame with labels
 
     """
     # Read in size distribution data
@@ -107,9 +110,9 @@ def get_labels_ene(fi, hyperparameters):
     delta_N_T = delta_N_T.where(delta_N_T.values < 100, 0)
     # delta_V_T = delta_V_T.where(delta_V_T.values < 1000, 0)
 
-    number_event = delta_N_T > hyperparameters['nuc_threshold']
-    volume_event = (delta_V_T > hyperparameters['pos_vol_threshold']) | (
-            delta_V_T < hyperparameters['neg_vol_threshold'])
+    number_event = delta_N_T > nuc_threshold
+    volume_event = (delta_V_T > pos_vol_threshold) | (
+            delta_V_T < neg_vol_threshold)
 
     label_idx = np.where(number_event | volume_event, 'e', 'ne')
 

@@ -182,7 +182,7 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
     return X_train, X_test, y_train, y_test
 
 
-def read_raw_simulations(params, test_size=0.1, data_version=2, normalize=True):
+def read_raw_simulations(params, test_size=0.1, data_version=2, normalize=True, label_type='event-noevent'):
     """ Generate data files to be used by HTK
 
     Notes
@@ -204,10 +204,10 @@ def read_raw_simulations(params, test_size=0.1, data_version=2, normalize=True):
                 np.absolute(pd.DataFrame(index=size_dist_df.index, data=cm3_to_dndlogdp(size_dist_df)) + 10))
 
         # Calculate labels
-        if params['label_type'] == 'event-noevent':
-            labels = get_labels_ene(file, params)
+        if label_type == 'event-noevent':
+            labels = get_labels_ene(file)
 
-        elif params['label_type'] == 'nccd':
+        elif label_type == 'nccd':
             labels = get_labels_nccd(file, params)
 
         # Split data, 90% for training, 10% for testing
@@ -241,11 +241,11 @@ def read_raw_simulations(params, test_size=0.1, data_version=2, normalize=True):
 
     logging.info("Train files:\t" + str(train_count))
 
-    X_train = {'script_file': train_file, 'count': train_count, 'id': params['data_version'] + '.train.synth.synth'}
-    X_test = {'script_file': test_file, 'count': test_count, 'id': params['data_version'] + '.test.synth.synth'}
+    X_train = {'script_file': train_file, 'count': train_count, 'id': f'{data_version}.train.synth.synth'}
+    X_test = {'script_file': test_file, 'count': test_count, 'id': f'{data_version}.test.synth.synth'}
 
-    y_train = {'mlf': train_label_file, 'count': None, 'id': params['data_version'] + '.train.synth.synth'}
-    y_test = {'mlf': test_label_file, 'count': None, 'id': params['data_version'] + '.test.synth.synth'}
+    y_train = {'mlf': train_label_file, 'count': None, 'id': f'{data_version}.train.synth.synth'}
+    y_test = {'mlf': test_label_file, 'count': None, 'id': f'{data_version}.test.synth.synth'}
 
     return X_train, X_test, y_train, y_test
 
