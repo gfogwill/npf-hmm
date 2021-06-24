@@ -4,6 +4,7 @@ import logging
 import pandas as pd
 import numpy as np
 import datetime
+
 from npfd.models.HTK.htktools import HCopy, clean_dir
 from npfd.data.size_distribution import cm3_to_dndlogdp, decimalDOY2datetime
 from npfd.data.htk import write_data
@@ -181,7 +182,7 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
     return X_train, X_test, y_train, y_test
 
 
-def read_raw_simulations(params, test_size=0.1):
+def read_raw_simulations(params, test_size=0.1, data_version=2, normalize=True):
     """ Generate data files to be used by HTK
 
     Notes
@@ -190,41 +191,38 @@ def read_raw_simulations(params, test_size=0.1):
 
     """
 
-    if not os.listdir(DATA_TEST_PATH):
-        # Convert and split file into test.synth and train.synth
-        for file in os.listdir(RAW_SIMULATION_DATA_PATH):
-            if file.endswith('.h5') and file.startswith(params['data_version']):
-                file_name = file[:-3]
+    # Convert and split file into test.synth and train.synth
+    for file in (raw_data_path / 'malte-uhma_backup').glob('*{data_version}-*.h5'):
+        file_name = file[:-3]
 
-                # Read in size distribution data
-                size_dist_df = pd.read_hdf(RAW_SIMULATION_DATA_PATH + file, key='obs/particle').resample('10T').mean() / 1e6
+        # Read in size distribution data
+        size_dist_df = pd.read_hdf(raw_data_path / 'malte-uhma' / file, key='obs/particle').resample('10T').mean() / 1e6
 
-                if params['normalize']:
-                    # size_dist_df = pd.DataFrame(index=size_dist_df.index, data=cm3_to_dndlogdp(size_dist_df / 1e6))
-                    size_dist_df = np.log10(
-                        np.absolute(pd.DataFrame(index=size_dist_df.index, data=cm3_to_dndlogdp(size_dist_df)) + 10))
-                else:
-                    pass
+        if normalize:
+            # size_dist_df = pd.DataFrame(index=size_dist_df.index, data=cm3_to_dndlogdp(size_dist_df / 1e6))
+            size_dist_df = np.log10(
+                np.absolute(pd.DataFrame(index=size_dist_df.index, data=cm3_to_dndlogdp(size_dist_df)) + 10))
 
-                # Calculate labels
-                if params['label_type'] == 'event-noevent':
-                    labels = get_labels_ene(file, params)
-                elif params['label_type'] == 'nccd':
-                    labels = get_labels_nccd(file, params)
+        # Calculate labels
+        if params['label_type'] == 'event-noevent':
+            labels = get_labels_ene(file, params)
 
-                # Split data, 90% for training, 10% for testing
-                if np.random.rand() < test_size:
-                    fo = os.path.join(interim_data_path, 'test.synth', file_name[2:])
-                    fo_label = os.path.join(LABEL_TEST_PATH, file_name[2:])
-                else:
-                    fo = os.path.join(interim_data_path, 'train.synth', file_name[2:])
-                    fo_label = os.path.join(LABEL_TRAIN_PATH, file_name[2:])
+        elif params['label_type'] == 'nccd':
+            labels = get_labels_nccd(file, params)
 
-                # Write data
-                write_data(fo, size_dist_df)
+        # Split data, 90% for training, 10% for testing
+        if np.random.rand() < test_size:
+            fo = interim_data_path / 'test.synth' / file_name[2:]
+            fo_label = os.path.join(LABEL_TEST_PATH, file_name[2:])
+        else:
+            fo = interim_data_path / 'train.synth' / file_name[2:]
+            fo_label = os.path.join(LABEL_TRAIN_PATH, file_name[2:])
 
-                # Write labels to file
-                write_label(fo_label, labels)
+        # Write data
+        write_data(fo, size_dist_df)
+
+        # Write labels to file
+        write_label(fo_label, labels)
 
     train_file, test_file = gen_scp_files()
     train_label_file, test_label_file = master_label_file()
@@ -232,14 +230,15 @@ def read_raw_simulations(params, test_size=0.1):
     logging.info('Adding deltas and acelerations...')
 
     test_count = HCopy(['-C', htk_misc_dir / 'config.hcopy',
-                        '-S', TEST_HCOPY_SCP,
+                        '-S', interim_data_path / 'test_hcopy.scp',
                         '-T', 1])
     logging.info("Test files:\t" + str(test_count))
 
     # Train
     train_count = HCopy(['-C', htk_misc_dir / 'config.hcopy',
-                         '-S', TRAIN_HCOPY_SCP,
+                         '-S', interim_data_path / 'train_hcopy.scp',
                          '-T', 1])
+
     logging.info("Train files:\t" + str(train_count))
 
     X_train = {'script_file': train_file, 'count': train_count, 'id': params['data_version'] + '.train.synth.synth'}
@@ -267,28 +266,29 @@ def clean_interim():
 def gen_scp_files():
     logging.info('Generating script (.scp) files...')
 
-    with open(TRAIN_HCOPY_SCP, 'wt') as fi:
+    with open(interim_data_path / 'train_hcopy.scp', 'wt') as fi:
         for file in os.listdir(DATA_TRAIN_PATH):
             line = os.path.join(DATA_TRAIN_PATH, file) + ' ' + os.path.join(DATA_TRAIN_DA_PATH, file) + '\n'
             logging.debug(line)
             fi.write(line)
 
-    with open(TRAIN_SCP, 'wt') as fi:
+    with open(interim_data_path / 'train.scp', 'wt') as fi:
         for file in os.listdir(DATA_TRAIN_PATH):
             line = os.path.join(DATA_TRAIN_DA_PATH, file) + '\n'
             fi.write(line)
 
-    with open(TEST_HCOPY_SCP, 'wt') as fi:
+    with open(interim_data_path / 'test_hcopy.scp', 'wt') as fi:
         for file in os.listdir(DATA_TEST_PATH):
             line = os.path.join(DATA_TEST_PATH, file) + ' ' + os.path.join(DATA_TEST_DA_PATH, file) + '\n'
             fi.write(line)
 
-    with open(TEST_SCP, 'wt') as fi:
+    with open(interim_data_path / 'test.scp', 'wt') as fi:
         for file in os.listdir(DATA_TEST_PATH):
             line = os.path.join(DATA_TEST_DA_PATH, file) + '\n'
             fi.write(line)
 
-    return TRAIN_SCP, TEST_SCP
+    return interim_data_path / 'train.scp', interim_data_path / 'test.scp'
+
 
 if __name__ == '__main__':
     SEARCH_PARAMS = {'normalize': True,
