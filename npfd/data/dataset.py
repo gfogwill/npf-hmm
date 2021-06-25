@@ -14,21 +14,6 @@ from ..paths import raw_data_path, interim_data_path, figures_path, htk_misc_dir
 
 DMPS_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/dmps/dmps_mbio_2015/DATA/')
 
-TEST_SCP = os.path.join(os.path.dirname(__file__), '../../data/interim/test.scp')
-TEST_HCOPY_SCP = os.path.join(os.path.dirname(__file__), '../../data/interim/test_hcopy.scp')
-TRAIN_SCP = os.path.join(os.path.dirname(__file__), '../../data/interim/train.scp')
-TRAIN_HCOPY_SCP = os.path.join(os.path.dirname(__file__), '../../data/interim/train_hcopy.scp')
-
-DATA_TRAIN_DA_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/train_D_A')
-DATA_TEST_DA_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/test_D_A')
-DATA_TRAIN_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/train.synth')
-DATA_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/test.synth')
-RESULTS_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/results')
-LABEL_TRAIN_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_train')
-LABEL_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_test')
-LABEL_REAL_TRAIN_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_real_train')
-LABEL_REAL_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_real_test')
-
 RAW_SIMULATION_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/malte-uhma/')
 
 ADAPT_FILES = ['20170115.cle',
@@ -80,13 +65,15 @@ def make_dataset(dataset_name=None, clean_interim_dir=False, test_size=0.1):
 
 
 def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.1):
-    train_data_path = os.path.join(interim_data_path, 'train.synth.real')
-    test_data_path = os.path.join(interim_data_path, 'test.synth.real')
-    train_D_A_data_path = os.path.join(interim_data_path, 'train_D_A.real')
-    test_D_A_data_path = os.path.join(interim_data_path, 'test_D_A.real')
+    dataset_name = 'dmps'
 
-    train_scp_file = os.path.join(interim_data_path, 'train_D_A.real.scp')
-    test_scp_file = os.path.join(interim_data_path, 'test_D_A.real.scp')
+    train_data_path = interim_data_path / f'{dataset_name}_train'
+    test_data_path = interim_data_path / f'{dataset_name}_test'
+    train_D_A_data_path = interim_data_path / f'{dataset_name}_train_D_A'
+    test_D_A_data_path = interim_data_path / f'{dataset_name}_test_D_A'
+
+    train_scp_file = interim_data_path / f'{dataset_name}_train_D_A.scp'
+    test_scp_file = interim_data_path / f'{dataset_name}_test_D_A.scp'
 
     try:
         os.mkdir(train_data_path)
@@ -120,17 +107,14 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
         if skip_invalid_day and nukdata.isin([-999]).any().any():
             continue
 
-        file = file.replace('DM', '')
-        file = file.replace('dm', '')
-
         # Split data, 90% for training, 10% for testing
         if np.random.rand() < test_size:
-            fo = os.path.join(test_data_path, file[:-4])
-            fo_label = os.path.join(LABEL_REAL_TEST_PATH, file[:-4])
+            fo = test_data_path / file.stem[2:]
+            fo_label = interim_data_path / 'labels_real_test' / file.stem[2:]
             fo_D_A = fo.replace('test.synth', 'test_D_A')
         else:
-            fo = os.path.join(train_data_path, file[:-4])
-            fo_label = os.path.join(LABEL_REAL_TRAIN_PATH, file[:-4])
+            fo = train_data_path / file.stem[2:]
+            fo_label = interim_data_path / 'labels_real_train' / file.stem[2:]
             fo_D_A = fo.replace('train.synth', 'train_D_A')
 
         # labels.index = pd.to_datetime(labels.index)
@@ -174,7 +158,8 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
     return X_train, X_test, y_train, y_test
 
 
-def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_type='event-noevent'):
+def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_type='event-noevent',
+                         clean_existing_data=True):
     """ Generate data files to be used by HTK
 
     Notes
@@ -182,9 +167,33 @@ def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_ty
     Data is resampeled to 10 minutes period
 
     """
+    dataset_name = 'malte-uhma'
+
+    train_data_path = interim_data_path / f'{dataset_name}_train'
+    test_data_path = interim_data_path / f'{dataset_name}_test'
+    train_D_A_data_path = interim_data_path / f'{dataset_name}_train_D_A'
+    test_D_A_data_path = interim_data_path / f'{dataset_name}_test_D_A'
+    train_labels_path = interim_data_path / f'{dataset_name}_labels_train'
+    test_labels_path = interim_data_path / f'{dataset_name}_labels_test'
+
+    try:
+        os.mkdir(train_data_path)
+        os.mkdir(test_data_path)
+        os.mkdir(train_D_A_data_path)
+        os.mkdir(test_D_A_data_path)
+    except FileExistsError:
+        if clean_existing_data:
+            clean_dir(train_data_path)
+            clean_dir(test_data_path)
+            clean_dir(train_D_A_data_path)
+            clean_dir(test_D_A_data_path)
+            clean_dir(train_labels_path)
+            clean_dir(test_labels_path)
+        else:
+            pass
 
     # Convert and split file into test.synth and train.synth
-    for file in (raw_data_path / 'malte-uhma_backup').glob('*{data_version}-*.h5'):
+    for file in (raw_data_path / 'malte-uhma').glob(f'*{data_version}-*.h5'):
         file_name = file[:-3]
 
         # Read in size distribution data
@@ -198,17 +207,16 @@ def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_ty
         # Calculate labels
         if label_type == 'event-noevent':
             labels = get_labels_ene(file)
-
         elif label_type == 'nccd':
             labels = get_labels_nccd(file)
 
-        # Split data, 90% for training, 10% for testing
+        # Split data, test/train
         if np.random.rand() < test_size:
-            fo = interim_data_path / 'test.synth' / file_name[2:]
-            fo_label = os.path.join(LABEL_TEST_PATH, file_name[2:])
+            fo = test_data_path / file_name[2:]
+            fo_label = test_labels_path / file_name[2:]
         else:
-            fo = interim_data_path / 'train.synth' / file_name[2:]
-            fo_label = os.path.join(LABEL_TRAIN_PATH, file_name[2:])
+            fo = train_data_path / file_name[2:]
+            fo_label = train_labels_path / file_name[2:]
 
         # Write data
         write_data(fo, size_dist_df)
@@ -216,9 +224,9 @@ def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_ty
         # Write labels to file
         write_label(fo_label, labels)
 
-    train_file, test_file = gen_scp_files()
+    train_file, test_file = gen_scp_files(dataset_name)
 
-    train_label_file, test_label_file = master_label_file()
+    train_label_file, test_label_file = master_label_file(dataset_name)
 
     logging.info('Adding deltas and acelerations...')
 
@@ -247,40 +255,48 @@ def clean_interim():
     clean_dir(interim_data_path)
     clean_dir(figures_path)
 
-    os.mkdir(LABEL_TEST_PATH)
-    os.mkdir(LABEL_TRAIN_PATH)
-    os.mkdir(RESULTS_PATH)
-    os.mkdir(DATA_TEST_PATH)
-    os.mkdir(DATA_TRAIN_PATH)
-    os.mkdir(DATA_TEST_DA_PATH)
-    os.mkdir(DATA_TRAIN_DA_PATH)
+    # os.mkdir(LABEL_TEST_PATH)
+    # os.mkdir(LABEL_TRAIN_PATH)
+    # os.mkdir(RESULTS_PATH)
+    # os.mkdir(DATA_TEST_PATH)
+    # os.mkdir(DATA_TRAIN_PATH)
+    # os.mkdir(DATA_TEST_DA_PATH)
+    # os.mkdir(DATA_TRAIN_DA_PATH)
 
 
-def gen_scp_files():
+def gen_scp_files(dataset_name):
     logging.info('Generating script (.scp) files...')
 
+    train_data_path = interim_data_path / f'{dataset_name}_train'
+    test_data_path = interim_data_path / f'{dataset_name}_test'
+    train_D_A_data_path = interim_data_path / f'{dataset_name}_train_D_A'
+    test_D_A_data_path = interim_data_path / f'{dataset_name}_test_D_A'
+
+    train_scp_file = interim_data_path / f'{dataset_name}_train_D_A.scp'
+    test_scp_file = interim_data_path / f'{dataset_name}_test_D_A.scp'
+
     with open(interim_data_path / 'train_hcopy.scp', 'wt') as fi:
-        for file in os.listdir(DATA_TRAIN_PATH):
-            line = os.path.join(DATA_TRAIN_PATH, file) + ' ' + os.path.join(DATA_TRAIN_DA_PATH, file) + '\n'
+        for file in train_data_path.glob('*'):
+            line = str(train_data_path / file) + ' ' + str(train_D_A_data_path / file) + '\n'
             logging.debug(line)
             fi.write(line)
 
-    with open(interim_data_path / 'train.scp', 'wt') as fi:
-        for file in os.listdir(DATA_TRAIN_PATH):
-            line = os.path.join(DATA_TRAIN_DA_PATH, file) + '\n'
+    with open(train_scp_file, 'wt') as fi:
+        for file in train_data_path.glob('*'):
+            line = str(train_data_path / file) + '\n'
             fi.write(line)
 
     with open(interim_data_path / 'test_hcopy.scp', 'wt') as fi:
-        for file in os.listdir(DATA_TEST_PATH):
-            line = os.path.join(DATA_TEST_PATH, file) + ' ' + os.path.join(DATA_TEST_DA_PATH, file) + '\n'
+        for file in test_data_path.glob('*'):
+            line = str(test_data_path / file) + ' ' + str(test_data_path / file) + '\n'
             fi.write(line)
 
-    with open(interim_data_path / 'test.scp', 'wt') as fi:
-        for file in os.listdir(DATA_TEST_PATH):
-            line = os.path.join(DATA_TEST_DA_PATH, file) + '\n'
+    with open(test_scp_file, 'wt') as fi:
+        for file in test_data_path.glob('*'):
+            line = os.path.join(test_D_A_data_path, file) + '\n'
             fi.write(line)
 
-    return interim_data_path / 'train.scp', interim_data_path / 'test.scp'
+    return train_scp_file, test_scp_file
 
 
 if __name__ == '__main__':

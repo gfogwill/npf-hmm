@@ -7,6 +7,8 @@ import pandas as pd
 from npfd.models.HTK.htktools import clean_dir
 from npfd.data.size_distribution import decimalDOY2datetime
 
+from ..paths import raw_data_path, interim_data_path
+
 MANUAL_LABELS_MLF_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/manual_labels_real_data.mlf')
 
 TEST_LABELS_MLF = os.path.join(os.path.dirname(__file__), '../../data/interim/test_labels.mlf')
@@ -19,57 +21,55 @@ DMPS_LABEL_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/inter
 
 RAW_SIMULATION_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/malte-uhma/')
 LABELS_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels')
-RAW_DATA_DIR = os.path.join(os.path.dirname(__file__), '../../data/raw/')
 
 LABEL_TRAIN_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_train')
 LABEL_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_test')
 
 
-def make_labels(thresholds, how='event-noevent', data_version=2):
-    """Generate labels
-
-    For each .h5 file in data/raw directory generates the corresponding HTK label file.
-
-    Parameters
-    ----------
-    thresholds : int
-        Description of arg1
-    how : str
-        Description of arg2
-
-    Returns
-    -------
-    bool
-        Description of return value
-
-    """
-    data_version = str(data_version)
-
-    # Remove all files from interim/labels directory
-    clean_dir(LABELS_PATH)
-
-    logging.info('Creating labels ...')
-
-    # Walk over all files in data/raw directory.
-    for file in os.listdir(RAW_SIMULATION_DATA_PATH):
-        if file.endswith('.h5') and file.startswith(data_version):
-            file_name = file[:-3]
-
-            # Calculate labels
-            if how == 'event-noevent':
-                labels = get_labels_ene(file, thresholds)
-            elif how == 'nccd':
-                labels = get_labels_nccd(file, thresholds)
-
-            # Write labels to file
-            fo = os.path.join(LABELS_PATH, file_name[2:])
-            write_label(fo, labels)
-
-    logging.info('Labels created OK!')
-
-    results = {'script_file': master_label_file()}
-
-    return results
+# def make_labels(thresholds, how='event-noevent', data_version=2):
+#     """Generate labels
+#
+#     For each .h5 file in data/raw directory generates the corresponding HTK label file.
+#
+#     Parameters
+#     ----------
+#     thresholds : int
+#         Description of arg1
+#     how : str
+#         Description of arg2
+#
+#     Returns
+#     -------
+#     bool
+#         Description of return value
+#
+#     """
+#     # Remove all files from interim/labels directory
+#     clean_dir(LABELS_PATH)
+#
+#     logging.info('Creating labels ...')
+#
+#     # for file in os.listdir(RAW_SIMULATION_DATA_PATH):
+#     #     if file.endswith('.h5') and file.startswith(data_version):
+#     # Walk over all files in data/raw directory.
+#     for file in (raw_data_path / 'malte-uhma').glob(f'*{data_version}-*.h5'):
+#         file_name = file[:-3]
+#
+#         # Calculate labels
+#         if how == 'event-noevent':
+#             labels = get_labels_ene(file, thresholds)
+#         elif how == 'nccd':
+#             labels = get_labels_nccd(file, thresholds)
+#
+#         # Write labels to file
+#         fo = os.path.join(LABELS_PATH, file_name[2:])
+#         write_label(fo, labels)
+#
+#     logging.info('Labels created OK!')
+#
+#     results = {'script_file': master_label_file()}
+#
+#     return results
 
 
 def get_labels_ene(fi, nuc_threshold=0.15, pos_vol_threshold=200, neg_vol_threshold=-5000):
@@ -147,7 +147,7 @@ def get_labels_nccd(fi, hyperparameters):
 
     """
     # Read in size distribution data
-    aux_df = pd.read_hdf(RAW_DATA_DIR + fi, key='aux')
+    aux_df = pd.read_hdf(raw_data_path / fi, key='aux')
     aux_df = aux_df.resample('10T').sum()
 
     aux_df[['dn_nuc', 'dn_coa', 'dn_dep']] = aux_df[['dn_nuc', 'dn_coa', 'dn_dep']] / 1e6
@@ -199,33 +199,40 @@ def write_label(fo_name, labels):
     return
 
 
-def master_label_file():
+def master_label_file(dataset_name=None):
+    if dataset_name is None:
+        raise Exception('dataset_name is required')
+
+    train_mlf = interim_data_path / f'{dataset_name}' / '_train_labels.mlf'
+    test_mlf = interim_data_path / f'{dataset_name}' / '_test_labels.mlf'
+    train_labels_path = interim_data_path / f'{dataset_name}_labels_train'
+    test_labels_path = interim_data_path / f'{dataset_name}_labels_test'
 
     logging.info("Generating Master Label File (Train)...")
-    with open(TRAIN_LABELS_MLF, 'wt') as fo:
+    with open(train_mlf, 'wt') as fo:
         # Write MLF Header
         fo.write('#!MLF!#\n')
 
         # Write label for each label file
-        for file in os.listdir(LABEL_TRAIN_PATH):
-            with open(os.path.join(LABEL_TRAIN_PATH, file), 'rt') as label_file:
+        for file in os.listdir(train_labels_path):
+            with open(os.path.join(train_labels_path, file), 'rt') as label_file:
                 fo.write("\"*/" + file + ".lab\"\n")
                 fo.write(label_file.read())
                 fo.write('\n.\n')
 
     logging.info("Generating Master Label File (Test)...")
-    with open(TEST_LABELS_MLF, 'wt') as fo:
+    with open(test_mlf, 'wt') as fo:
         # Write MLF Header
         fo.write('#!MLF!#\n')
 
         # Write label for each label file
-        for file in os.listdir(LABEL_TEST_PATH):
-            with open(os.path.join(LABEL_TEST_PATH, file), 'rt') as label_file:
+        for file in os.listdir(test_labels_path):
+            with open(os.path.join(test_labels_path, file), 'rt') as label_file:
                 fo.write("\"*/" + file + ".lab\"\n")
                 fo.write(label_file.read())
                 fo.write('\n.\n')
 
-    return TRAIN_LABELS_MLF, TEST_LABELS_MLF
+    return train_mlf, test_mlf
 
 
 def dmps_master_label_file():
