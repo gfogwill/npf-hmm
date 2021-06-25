@@ -94,7 +94,7 @@ def get_labels_ene(fi, nuc_threshold=0.15, pos_vol_threshold=200, neg_vol_thresh
 
     """
     # Read in size distribution data
-    aux_df = pd.read_hdf(RAW_SIMULATION_DATA_PATH + fi, key='aux')
+    aux_df = pd.read_hdf(raw_data_path / 'malte-uhma' / fi, key='aux')
     aux_df = aux_df.resample('10T').sum()
 
     aux_df[['dn_nuc', 'dn_coa', 'dn_dep']] = aux_df[['dn_nuc', 'dn_coa', 'dn_dep']] / 1e6
@@ -203,8 +203,8 @@ def master_label_file(dataset_name=None):
     if dataset_name is None:
         raise Exception('dataset_name is required')
 
-    train_mlf = interim_data_path / f'{dataset_name}' / '_train_labels.mlf'
-    test_mlf = interim_data_path / f'{dataset_name}' / '_test_labels.mlf'
+    train_mlf = interim_data_path / f'{dataset_name}_train_labels.mlf'
+    test_mlf = interim_data_path / f'{dataset_name}_test_labels.mlf'
     train_labels_path = interim_data_path / f'{dataset_name}_labels_train'
     test_labels_path = interim_data_path / f'{dataset_name}_labels_test'
 

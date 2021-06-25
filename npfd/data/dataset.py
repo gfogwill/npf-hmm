@@ -71,6 +71,8 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
     test_data_path = interim_data_path / f'{dataset_name}_test'
     train_D_A_data_path = interim_data_path / f'{dataset_name}_train_D_A'
     test_D_A_data_path = interim_data_path / f'{dataset_name}_test_D_A'
+    train_labels_path = interim_data_path / f'{dataset_name}_labels_train'
+    test_labels_path = interim_data_path / f'{dataset_name}_labels_test'
 
     train_scp_file = interim_data_path / f'{dataset_name}_train_D_A.scp'
     test_scp_file = interim_data_path / f'{dataset_name}_test_D_A.scp'
@@ -80,6 +82,8 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
         os.mkdir(test_data_path)
         os.mkdir(train_D_A_data_path)
         os.mkdir(test_D_A_data_path)
+        os.mkdir(train_labels_path)
+        os.mkdir(test_labels_path)
     except FileExistsError:
         # pass
         if clean_existing_data:
@@ -87,6 +91,8 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
             clean_dir(test_data_path)
             clean_dir(train_D_A_data_path)
             clean_dir(test_D_A_data_path)
+            clean_dir(train_labels_path)
+            clean_dir(test_labels_path)
         else:
             pass
 
@@ -110,18 +116,12 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
         # Split data, 90% for training, 10% for testing
         if np.random.rand() < test_size:
             fo = test_data_path / file.stem[2:]
-            fo_label = interim_data_path / 'labels_real_test' / file.stem[2:]
-            fo_D_A = fo.replace('test.synth', 'test_D_A')
+            fo_label = test_labels_path / file.stem[2:]
+            fo_D_A = test_D_A_data_path / file.stem[2:]
         else:
             fo = train_data_path / file.stem[2:]
-            fo_label = interim_data_path / 'labels_real_train' / file.stem[2:]
-            fo_D_A = fo.replace('train.synth', 'train_D_A')
-
-        # labels.index = pd.to_datetime(labels.index)
-        # # Get labels
-        # start = datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8]))
-        # end = (datetime.datetime(int(file[:4]), int(file[4:6]), int(file[6:8])) + datetime.timedelta(days=1))
-        # day_labels = labels.loc[start:end]
+            fo_label = train_labels_path / file.stem[2:]
+            fo_D_A = train_D_A_data_path / file.stem[2:]
 
         day_labels = labels.loc[nukdata.index[0]:nukdata.index[0]+datetime.timedelta(days=1)]
 
@@ -181,6 +181,8 @@ def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_ty
         os.mkdir(test_data_path)
         os.mkdir(train_D_A_data_path)
         os.mkdir(test_D_A_data_path)
+        os.mkdir(train_labels_path)
+        os.mkdir(test_labels_path)
     except FileExistsError:
         if clean_existing_data:
             clean_dir(train_data_path)
@@ -194,7 +196,7 @@ def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_ty
 
     # Convert and split file into test.synth and train.synth
     for file in (raw_data_path / 'malte-uhma').glob(f'*{data_version}-*.h5'):
-        file_name = file[:-3]
+        file_name = file.stem[2:]
 
         # Read in size distribution data
         size_dist_df = pd.read_hdf(raw_data_path / 'malte-uhma' / file, key='obs/particle').resample('10T').mean() / 1e6
