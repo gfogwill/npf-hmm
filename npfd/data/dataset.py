@@ -12,6 +12,8 @@ from npfd.data.labels import get_labels_ene, get_labels_nccd, write_label, maste
 
 from npfd.paths import raw_data_path, interim_data_path, figures_path, htk_misc_dir
 
+np.random.seed(7)
+
 DMPS_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/dmps/dmps_mbio_2015/DATA/')
 
 RAW_SIMULATION_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/malte-uhma/')
@@ -239,6 +241,7 @@ def read_raw_simulations(dataset_name=None, test_size=0.1, data_version=2, norma
     test_count = HCopy(['-C', htk_misc_dir / 'config.hcopy',
                         '-S', interim_data_path / 'test_hcopy.scp',
                         '-T', 1])
+
     logging.info("Test files:\t" + str(test_count))
 
     # Train
