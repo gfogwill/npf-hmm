@@ -52,10 +52,10 @@ def make_dataset(dataset_name=None, clean_interim_dir=True, test_size=0.1):
     if clean_interim_dir:
         clean_interim()
 
-    if dataset_name == 'malte-uhma':
+    if dataset_name == 'db1' or dataset_name == 'db2':
         logging.info('Converting malte-uhma raw files to HTK format ...')
-        X_train, X_test, y_train, y_test = read_raw_simulations(test_size)
-    elif dataset_name == 'dmps':
+        X_train, X_test, y_train, y_test = read_raw_simulations(dataset_name, test_size)
+    elif dataset_name == 'db3':
         logging.info('Converting real raw files to HTK format ...')
         X_train, X_test, y_train, y_test = read_raw_dmps(test_size=test_size)
     else:
@@ -98,7 +98,8 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
 
     labels = pd.read_csv(raw_data_path / 'dmps' / 'event_classification.csv', index_col=0)
     labels.index = pd.to_datetime(labels.index)
-    count = 0
+    train_count = 0
+    test_count = 0
 
     for file in (raw_data_path / 'dmps/inv').glob('*.cle'):
         nukdata = pd.read_csv(raw_data_path / 'dmps/inv' / file, sep=r'\s+')
@@ -117,10 +118,12 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
 
         # Split data, 90% for training, 10% for testing
         if np.random.rand() < test_size:
+            test_count += 1
             fo = test_data_path / file.stem[2:]
             fo_label = test_labels_path / file.stem[2:]
             fo_D_A = test_D_A_data_path / file.stem[2:]
         else:
+            train_count += 1
             fo = train_data_path / file.stem[2:]
             fo_label = train_labels_path / file.stem[2:]
             fo_D_A = train_D_A_data_path / file.stem[2:]
@@ -136,8 +139,6 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
 
         HCopy([fo, fo_D_A, '-C', htk_misc_dir / 'config.hcopy'])
 
-        count += 1
-
     train_labels, test_labels = master_label_file(dataset_name)
 
     with open(train_scp_file, 'wt') as fi:
@@ -150,8 +151,8 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
             line = str(test_D_A_data_path / file) + '\n'
             fi.write(line)
 
-    X_train = {'script_file': train_scp_file, 'count': 1, 'id': 'train_D_A.real'}
-    X_test = {'script_file': test_scp_file, 'count': 1, 'id': 'test_D_A.real'}
+    X_train = {'script_file': train_scp_file, 'count': train_count, 'id': 'train_D_A.real'}
+    X_test = {'script_file': test_scp_file, 'count': test_count, 'id': 'test_D_A.real'}
 
     y_train = {'mlf': train_labels, 'count': None, 'id': 'train.real'}
     y_test = {'mlf': test_labels, 'count': None, 'id': 'test.real'}
@@ -159,7 +160,7 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
     return X_train, X_test, y_train, y_test
 
 
-def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_type='event-noevent',
+def read_raw_simulations(dataset_name=None, test_size=0.1, data_version=2, normalize=True, label_type='event-noevent',
                          clean_existing_data=True, add_na=True):
     """ Generate data files to be used by HTK
 
@@ -168,7 +169,9 @@ def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_ty
     Data is resampeled to 10 minutes period
 
     """
-    dataset_name = 'malte-uhma'
+
+    if dataset_name is None:
+        raise Exception('dataset_name is needed')
 
     train_data_path = interim_data_path / f'{dataset_name}_train'
     test_data_path = interim_data_path / f'{dataset_name}_test'
@@ -196,11 +199,11 @@ def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_ty
             pass
 
     # Convert and split file into test.synth and train.synth
-    for file in (raw_data_path / 'malte-uhma').glob(f'*{data_version}-*.h5'):
+    for file in (raw_data_path / f'{dataset_name}').glob(f'*{data_version}-*.h5'):
         file_name = file.stem[2:]
 
         # Read in size distribution data
-        size_dist_df = pd.read_hdf(raw_data_path / 'malte-uhma' / file, key='obs/particle').resample('10T').mean() / 1e6
+        size_dist_df = pd.read_hdf(raw_data_path / f'{dataset_name}' / file, key='obs/particle').resample('10T').mean() / 1e6
 
         if normalize:
             # size_dist_df = pd.DataFrame(index=size_dist_df.index, data=cm3_to_dndlogdp(size_dist_df / 1e6))
