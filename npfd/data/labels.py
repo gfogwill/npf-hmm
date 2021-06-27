@@ -72,7 +72,7 @@ LABEL_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/la
 #     return results
 
 
-def get_labels_ene(fi, nuc_threshold=0.15, pos_vol_threshold=200, neg_vol_threshold=-5000):
+def get_labels_ene(fi, add_na, nuc_threshold=0.15, pos_vol_threshold=200, neg_vol_threshold=-5000):
     """Generate event/no-event labels
 
     Generate the labels corresponding to a specific file.

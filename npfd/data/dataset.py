@@ -10,7 +10,7 @@ from npfd.data.size_distribution import cm3_to_dndlogdp, decimalDOY2datetime
 from npfd.data.htk import write_data
 from npfd.data.labels import get_labels_ene, get_labels_nccd, write_label, master_label_file, dmps_master_label_file
 
-from ..paths import raw_data_path, interim_data_path, figures_path, htk_misc_dir
+from npfd.paths import raw_data_path, interim_data_path, figures_path, htk_misc_dir
 
 DMPS_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/dmps/dmps_mbio_2015/DATA/')
 
@@ -27,7 +27,7 @@ ADAPT_FILES = ['20170115.cle',
                ]
 
 
-def make_dataset(dataset_name=None, clean_interim_dir=False, test_size=0.1):
+def make_dataset(dataset_name=None, clean_interim_dir=True, test_size=0.1):
     r"""Generates data files
 
     Long description
@@ -102,13 +102,15 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
 
     for file in (raw_data_path / 'dmps/inv').glob('*.cle'):
         nukdata = pd.read_csv(raw_data_path / 'dmps/inv' / file, sep=r'\s+')
-        nukdata = nukdata.replace(np.nan, -999)
+        # nukdata = nukdata.replace(np.nan, -999)
         nukdata.index = nukdata.iloc[:, 0].apply(decimalDOY2datetime)
 
         # TODO: change ffill
         # nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').ffill()
         nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').mean()
-        nukdata = nukdata.replace(np.nan, -999)
+        # nukdata = nukdata.replace(np.nan, -999)
+
+        nukdata.dropna(inplace=True)
 
         if skip_invalid_day and nukdata.isin([-999]).any().any():
             continue
@@ -134,32 +136,31 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
 
         HCopy([fo, fo_D_A, '-C', htk_misc_dir / 'config.hcopy'])
 
-        # scp_file.write(fo_D_A + '\n')
         count += 1
 
-    train_labels, test_labels = dmps_master_label_file()
+    train_labels, test_labels = master_label_file(dataset_name)
 
     with open(train_scp_file, 'wt') as fi:
-        for file in os.listdir(os.path.join(interim_data_path, 'train_D_A.real')):
-            line = os.path.join(os.path.join(interim_data_path, 'train_D_A.real'), file) + '\n'
+        for file in train_D_A_data_path.glob('*'):
+            line = str(train_D_A_data_path / file) + '\n'
             fi.write(line)
 
     with open(test_scp_file, 'wt') as fi:
-        for file in os.listdir(os.path.join(interim_data_path, 'test_D_A.real')):
-            line = os.path.join(os.path.join(interim_data_path, 'test_D_A.real'), file) + '\n'
+        for file in test_D_A_data_path.glob('*'):
+            line = str(test_D_A_data_path / file) + '\n'
             fi.write(line)
 
     X_train = {'script_file': train_scp_file, 'count': 1, 'id': 'train_D_A.real'}
     X_test = {'script_file': test_scp_file, 'count': 1, 'id': 'test_D_A.real'}
 
     y_train = {'mlf': train_labels, 'count': None, 'id': 'train.real'}
-    y_test = {'mlf': test_labels, 'count': None, 'id': '.test.real'}
+    y_test = {'mlf': test_labels, 'count': None, 'id': 'test.real'}
 
     return X_train, X_test, y_train, y_test
 
 
 def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_type='event-noevent',
-                         clean_existing_data=True):
+                         clean_existing_data=True, add_na=True):
     """ Generate data files to be used by HTK
 
     Notes
@@ -208,7 +209,7 @@ def read_raw_simulations(test_size=0.1, data_version=2, normalize=True, label_ty
 
         # Calculate labels
         if label_type == 'event-noevent':
-            labels = get_labels_ene(file)
+            labels = get_labels_ene(file, add_na)
         elif label_type == 'nccd':
             labels = get_labels_nccd(file)
 
@@ -317,7 +318,7 @@ if __name__ == '__main__':
                      }
 
     hyperparameters = {'init_metho': 'HCompV',
-              'raw_data_source': 'malte-uhma',
+              'raw_data_source': 'dmps',
               **SEARCH_PARAMS}
 
     read_raw_dmps()

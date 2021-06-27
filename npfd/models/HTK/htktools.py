@@ -347,7 +347,7 @@ def HResults(args, print_output=True):
 
 if __name__ == '__main__':
     model = 7
-    HEAdapt(['-S', '../data/interim/real_files.scp',
+    HCopy(['-S', '../data/interim/real_files.scp',
                   '-I', '../data/raw/dmps/manual_labels.mlf',
                   '-p', 0.000001,
                   '-H', '../models/hmm/' + str(model) + 'macros',
