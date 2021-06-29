@@ -70,7 +70,7 @@ class HiddenMarkovModel(object):
                          '-M', hmm_model_path / str(self.most_trained_model + 1),
                          '-s', hmm_model_path / str(self.most_trained_model + 1) / 'stats',
                          '-v', "{:0.10f}".format(hyperparameters['minimum_variance']),
-                         # '-t', 250.0,# 150.0, 1000.0,
+                         '-t', 250.0, 150.0, 1000.0,
                          # '-T', 1,
                          htk_misc_dir / 'monophones'])
 

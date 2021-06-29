@@ -19,24 +19,24 @@ SEARCH_PARAMS = {'normalize': True,
                  'grammar_scale_factor': 0.0
                  }
 
-
-from verta import Client
-
-HOST = "http://127.0.0.1:3000/"
-
-PROJECT_NAME = "NPF Detector"
-EXPERIMENT_NAME = "Automated Test - 25/01/2021"
-EXPERIMENT_DESCRIPTION = "minimum variance disabled when adapting"
-
-
-client = Client(HOST)
-proj = client.set_project(PROJECT_NAME)
-expt = client.set_experiment(EXPERIMENT_NAME)
+#
+# from verta import Client
+#
+# HOST = "http://127.0.0.1:3000/"
+#
+# PROJECT_NAME = "NPF Detector"
+# EXPERIMENT_NAME = "Automated Test - 25/01/2021"
+# EXPERIMENT_DESCRIPTION = "minimum variance disabled when adapting"
+#
+#
+# client = Client(HOST)
+# proj = client.set_project(PROJECT_NAME)
+# expt = client.set_experiment(EXPERIMENT_NAME)
 
 
 def train_evaluate(search_params):
 
-    run = client.set_experiment_run(desc=EXPERIMENT_DESCRIPTION)
+    # run = client.set_experiment_run(desc=EXPERIMENT_DESCRIPTION)
 
     params = {'init_metho': 'HCompV',
               'raw_data_source': 'malte-uhma',
@@ -52,7 +52,7 @@ def train_evaluate(search_params):
               'grammar_scale_factor': 0.0,
               **search_params}
 
-    run.log_hyperparameters(params)
+    # run.log_hyperparameters(params)
 
     X_train, X_val, y_train, y_val = data.dataset.make_dataset(params, clean_interim_dir=False)
 
@@ -92,7 +92,7 @@ def train_evaluate(search_params):
     except KeyError:
         score = 0
 
-    run.log_metric('correct_labels', score)
+    # run.log_metric('correct_labels', score)
 
     return score
 

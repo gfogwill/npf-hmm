@@ -9,24 +9,7 @@ from npfd.models.HTK.htktools import HCopy, clean_dir
 from npfd.data.size_distribution import cm3_to_dndlogdp, decimalDOY2datetime
 from npfd.data.htk import write_data
 from npfd.data.labels import get_labels_ene, get_labels_nccd, write_label, master_label_file, dmps_master_label_file
-
 from npfd.paths import raw_data_path, interim_data_path, figures_path, htk_misc_dir
-
-np.random.seed(7)
-
-DMPS_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/dmps/dmps_mbio_2015/DATA/')
-
-RAW_SIMULATION_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/malte-uhma/')
-
-ADAPT_FILES = ['20170115.cle',
-               '20170204.cle',
-               '20170324.cle',
-               '20171117.cle',
-               '20171225.cle',
-               '20170220.cle',
-               '20170130.cle',
-               '20171202.cle',
-               ]
 
 
 def make_dataset(dataset_name=None, clean_interim_dir=True, test_size=0.1):
@@ -49,7 +32,6 @@ def make_dataset(dataset_name=None, clean_interim_dir=True, test_size=0.1):
     y :
 
     """
-
     # Remove all files from interim directory
     if clean_interim_dir:
         clean_interim()
@@ -67,6 +49,9 @@ def make_dataset(dataset_name=None, clean_interim_dir=True, test_size=0.1):
 
 
 def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.1):
+
+    np.random.seed(7)
+
     dataset_name = 'dmps'
 
     train_data_path = interim_data_path / f'{dataset_name}_train'
@@ -171,6 +156,8 @@ def read_raw_simulations(dataset_name=None, test_size=0.1, data_version=2, norma
     Data is resampeled to 10 minutes period
 
     """
+
+    np.random.seed(7)
 
     if dataset_name is None:
         raise Exception('dataset_name is needed')

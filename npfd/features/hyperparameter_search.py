@@ -1,8 +1,9 @@
 import skopt
 from skopt.plots import plot_convergence
-from scripts import train_evaluate
+from npfd.features.scripts import train_evaluate
 from npfd import data
 import matplotlib.pyplot as plt
+
 
 SPACE = [
     skopt.space.Real(1e-5, 1e-1, name='variance_floor', prior='log-uniform'),
