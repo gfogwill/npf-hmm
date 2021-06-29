@@ -12,10 +12,14 @@ SPACE = [
     skopt.space.Real(0.0, 6.0, name='grammar_scale_factor', prior='uniform')
 ]
 
+X_train, X_val, y_train, y_val = data.dataset.make_dataset('db2', clean_interim_dir=False)
+X_adapt, X_final, y_adapt, y_final = data.dataset.make_dataset('db3', test_size=0.2)
+
+
 
 @skopt.utils.use_named_args(SPACE)
 def objective(**params):
-    return -1.0 * train_evaluate(params)
+    return -1.0 * train_evaluate(params, X_train, X_val, y_train, y_val, X_adapt, X_final, y_adapt, y_final)
 
 
 results = skopt.gp_minimize(objective, SPACE, n_calls=200)

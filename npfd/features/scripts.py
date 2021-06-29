@@ -34,30 +34,20 @@ SEARCH_PARAMS = {'normalize': True,
 # expt = client.set_experiment(EXPERIMENT_NAME)
 
 
-def train_evaluate(search_params):
-
+def train_evaluate(search_params, X_train, X_val, y_train, y_val, X_adapt, X_final, y_adapt, y_final):
     # run = client.set_experiment_run(desc=EXPERIMENT_DESCRIPTION)
 
-    params = {'init_metho': 'HCompV',
-              'raw_data_source': 'malte-uhma',
-              'normalize': True,
-              'data_version': '2',
-
-              # Labels
-              'label_type': 'event-noevent',
+    params = {# Labels
+              'init_metho': 'HCompV',
               'nuc_threshold': 0.15,  # 1/cm3/10min
               'pos_vol_threshold': 200,  # 1/m3^3/10min
               'neg_vol_threshold': -5000,  # 1/cm3/10min
+
               'word_insertion_penalty': 0.0,
               'grammar_scale_factor': 0.0,
               **search_params}
 
     # run.log_hyperparameters(params)
-
-    X_train, X_val, y_train, y_val = data.dataset.make_dataset(params, clean_interim_dir=False)
-
-    params['raw_data_source'] = 'real'
-    X_adapt, X_final, y_adapt, y_final = data.dataset.make_dataset(params, test_size=0.2)
 
     model = HiddenMarkovModel()
 
