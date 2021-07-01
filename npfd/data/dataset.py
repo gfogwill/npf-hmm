@@ -50,7 +50,7 @@ def make_dataset(dataset_name=None, clean_interim_dir=True, test_size=0.1):
 
 def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.1):
 
-    np.random.seed(7)
+    # np.random.seed(7)
 
     dataset_name = 'dmps'
 
@@ -160,7 +160,7 @@ def read_raw_simulations(dataset_name=None, test_size=0.1, data_version=2, norma
 
     """
 
-    np.random.seed(7)
+    # np.random.seed(7)
 
     if dataset_name is None:
         raise Exception('dataset_name is needed')
