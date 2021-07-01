@@ -34,48 +34,49 @@ SEARCH_PARAMS = {'normalize': True,
 # expt = client.set_experiment(EXPERIMENT_NAME)
 
 
-def train_evaluate(search_params, X_train, X_val, y_train, y_val, X_adapt, X_final, y_adapt, y_final):
+def train_evaluate(search_params, X_train, X_val, y_train, y_val, X_adapt, X_test, y_adapt, y_test):
     # run = client.set_experiment_run(desc=EXPERIMENT_DESCRIPTION)
 
     params = {# Labels
               'init_metho': 'HCompV',
-              'nuc_threshold': 0.15,  # 1/cm3/10min
-              'pos_vol_threshold': 200,  # 1/m3^3/10min
-              'neg_vol_threshold': -5000,  # 1/cm3/10min
+              # 'nuc_threshold': 0.15,  # 1/cm3/10min
+              # 'pos_vol_threshold': 200,  # 1/m3^3/10min
+              # 'neg_vol_threshold': -5000,  # 1/cm3/10min
 
               'word_insertion_penalty': 0.0,
               'grammar_scale_factor': 0.0,
               **search_params}
 
-    # run.log_hyperparameters(params)
+    edit_commands = ['MU 2 {*.state[2-4].mix}',
+                     'MU 4 {*.state[2-4].mix}',
+                     'MU 8 {*.state[2-4].mix}',
+                     'MU 16 {*.state[2-4].mix}',
+                     'MU 32 {*.state[2-4].mix}']#,
+                     # 'MU 64 {*.state[2-4].mix}',
+                     # 'MU 128 {*.state[2-4].mix}']
+                     # 'MU 256 {*.state[2-4].mix}']
 
+    # run.log_hyperparameters(params)
     model = HiddenMarkovModel()
 
     model.initialize(X_train, params)
 
     model.train(X_train, y_train, params)
-    # results = model.test.synth(X_val, y_val)
 
-    edit_commands = ['MU 2 {*.state[2-4].mix}']
+    for cmd in edit_commands:
+        model.edit([cmd])
+        model.train(X_train, y_train, params)
 
-    model.edit(edit_commands)
-    model.train(X_train, y_train, params)
+    model.adapt(X_adapt, y_adapt)
 
-    edit_commands = ['MU 4 {*.state[2-4].mix}']
-
-    model.edit(edit_commands)
-    model.train(X_train, y_train, params)
-
-    edit_commands = ['MU 8 {*.state[2-4].mix}']
-
-    model.edit(edit_commands)
-    model.train(X_train, y_train, params)
+    results = model.test(X_test, y_test, params)
+    #TODO: make number of gaussians a parameter to be tuned.
 
     # results = model.test.synth(X_adapt, y_adapt)
-
-    model.adapt(X_adapt, y_adapt, params)
-
-    results = model.test(X_final, y_final, params)
+    #
+    # model.adapt(X_adapt, y_adapt, params)
+    #
+    # results = model.test(X_final, y_final, params)
 
     try:
         score = results['WORD_Acc']

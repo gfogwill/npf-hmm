@@ -12,25 +12,32 @@ class HiddenMarkovModel(object):
         self.most_trained_model = None
         self.variance_floor = None
 
-    def initialize(self, data, hyperparameters):
+    def initialize(self, data, init_method=None, variance_floor=0, minimum_variance=0, **kwargs):#, **hyperparameters):
+        """Initialize HMM
+        # TODO: doc
+
+        """
+        if init_method is None:
+            raise Exception('Initialization method is required')
+
         htkt.clean_models()
 
         logging.info("Initializing model...")
         logging.info(htk_misc_dir)
-        if hyperparameters['init_metho'] == 'HCompV':
+        if init_method == 'HCompV':
             htkt.HCompV(['-C', htk_misc_dir / 'config',
                          '-S', data['script_file'],
                          '-M', hmm_model_path / '0',
                          '-T', 1,
-                         '-f', "{:.10f}".format(hyperparameters['variance_floor']),
-                         '-v', "{:.10f}".format(hyperparameters['minimum_variance']),
+                         '-f', "{:.10f}".format(variance_floor),
+                         '-v', "{:.10f}".format(minimum_variance),
                          '-m',
                          htk_misc_dir / 'proto'])
 
             htkt.gen_hmmdefs_from_proto()
             htkt.gen_macros()
 
-        elif hyperparameters['init_metho'] == 'HInit':
+        elif init_method == 'HInit':
             for label in ['ne', 'e']:
                 htkt.HInit(['-C', htk_misc_dir / 'config',
                             '-S', data['script_file'],
@@ -39,14 +46,14 @@ class HiddenMarkovModel(object):
                             # '-T', 1,
                             '-l', label,
                             '-o', label,
-                            '-v', "{:.10f}".format(hyperparameters['minimum_variance']),
+                            '-v', "{:.10f}".format(minimum_variance),
                             htk_misc_dir / 'proto'])
 
             htkt.HCompV(['-C', htk_misc_dir / 'config',
                          '-S', data['script_file'],
                          '-M', hmm_model_path / '0',
                          '-T', 1,
-                         '-f', "{:.10f}".format(hyperparameters['variance_floor']),
+                         '-f', "{:.10f}".format(variance_floor),
                          '-m',
                          htk_misc_dir / 'proto'])
 
@@ -57,7 +64,7 @@ class HiddenMarkovModel(object):
 
         return 0
 
-    def train(self, data, labels, hyperparameters):
+    def train(self, data, labels, **hyperparameters):
         logging.info("Training the model...")
         n = 3
 
@@ -70,7 +77,7 @@ class HiddenMarkovModel(object):
                          '-M', hmm_model_path / str(self.most_trained_model + 1),
                          '-s', hmm_model_path / str(self.most_trained_model + 1) / 'stats',
                          '-v', "{:0.10f}".format(hyperparameters['minimum_variance']),
-                         '-t', 250.0, 150.0, 1000.0,
+                         # '-t', 250.0, 150.0, 1000.0,
                          # '-T', 1,
                          htk_misc_dir / 'monophones'])
 
@@ -81,8 +88,7 @@ class HiddenMarkovModel(object):
 
         return self.most_trained_model
 
-    def test(self, data, labels, hyperparameters,
-             out_mlf_file=None):
+    def test(self, data, labels, out_mlf_file=None, **hyperparameters):
         logging.info("Testing model: " + str(self.most_trained_model))
 
         if out_mlf_file is None:
@@ -97,8 +103,8 @@ class HiddenMarkovModel(object):
                         '-s', "{:.10f}".format(hyperparameters['grammar_scale_factor']),
                         '-A',
                         # '-T', 1,
-                        '-J', hmm_model_path / 'classes',
-                        '-J', hmm_model_path / 'xforms' / 'mllr1',
+                        '-J', model_path / 'classes',
+                        '-J', model_path / 'xforms', 'mllr1',
                         '-h', '*/%*',
                         '-k',
                         '-w', htk_misc_dir / 'wdnet',
@@ -170,16 +176,15 @@ class HiddenMarkovModel(object):
             '-C', htk_misc_dir / 'config.globals',
             '-S', data['script_file'],
             '-I', labels['mlf'],
+            '-H', hmm_model_path / str(self.most_trained_model) / 'macros',
             '-u', 'a',
+            '-H', hmm_model_path / str(self.most_trained_model) / 'hmmdefs',
             # '-v', "{:.10f}".format(hyperparameters['minimum_variance']),
             # '-t', 250.0,
-            #     '-T',1,
-            '-K', hmm_model_path / 'xforms' / 'mllr1',
-            '-J', hmm_model_path / 'classes',
-            # '-h', INTERIM_DATA_DIR + data['id'] + '/%*',
+            '-T', 1,
+            '-K', model_path / 'xforms', 'mllr1',
+            '-J', model_path / 'classes',
             '-h', '*/%*',
-            '-H', hmm_model_path / str(self.most_trained_model) / 'macros',
-            '-H', hmm_model_path / str(self.most_trained_model) / 'hmmdefs',
             monophones_file])
 
         self.adapted = True

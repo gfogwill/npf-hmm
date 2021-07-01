@@ -98,8 +98,6 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
         nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').mean()
         # nukdata = nukdata.replace(np.nan, -999)
 
-        nukdata.dropna(inplace=True)
-
         if skip_invalid_day and nukdata.isin([-999]).any().any():
             continue
 
@@ -115,7 +113,12 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
             fo_label = train_labels_path / file.stem[2:]
             fo_D_A = train_D_A_data_path / file.stem[2:]
 
-        day_labels = labels.loc[nukdata.index[0]:nukdata.index[0]+datetime.timedelta(days=1)]
+        day_labels = labels.loc[nukdata.index[0]:nukdata.index[0]+datetime.timedelta(days=1)].copy()
+
+        day_labels.where(nukdata.sum(axis=1) != 0, np.nan, inplace=True)
+
+        nukdata.dropna(inplace=True)
+        day_labels.dropna(inplace=True)
 
         day_labels.where(nukdata.min(axis=1) != -999, 'na', inplace=True)
 

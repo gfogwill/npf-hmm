@@ -35,8 +35,11 @@ NUMBER_OF_SIZE_BINS = 25
 def clean_models():
     clean_dir(hmms_path)
 
+    os.mkdir(hmms_path / 'xforms')
+    os.mkdir(hmms_path / 'classes')
+
     for i in range(50):
-        os.mkdir(hmms_path + str(i))
+        os.mkdir(hmms_path / str(i))
 
 
 def gen_hmmdefs_from_proto(monophones=htk_misc_dir / 'monophones',
@@ -58,9 +61,9 @@ def gen_hmmdefs_from_proto(monophones=htk_misc_dir / 'monophones',
 
 def gen_hmmdefs(output=init_model_path / 'hmmdefs'):
 
-    with open(hmms_path + '0/ne') as ne_file:
+    with open(hmms_path / '0/ne') as ne_file:
         ne_str = ne_file.readlines()[3:]
-    with open(hmms_path + '0/e') as e_file:
+    with open(hmms_path / '0/e') as e_file:
         e_str = e_file.readlines()[3:]
 
     with open(output, 'wt') as hmmdefs:
@@ -68,7 +71,7 @@ def gen_hmmdefs(output=init_model_path / 'hmmdefs'):
         [hmmdefs.write(line) for line in e_str]
 
 
-def gen_macros(vFloors=init_model_path / 'vDloors',
+def gen_macros(vFloors=init_model_path / 'vFloors',
                proto=htk_misc_dir / 'proto',
                output=init_model_path / 'macros'):
 
