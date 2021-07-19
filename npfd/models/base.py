@@ -12,13 +12,13 @@ class HiddenMarkovModel(object):
         self.most_trained_model = None
         self.variance_floor = None
 
-    def initialize(self, data, init_method=None, variance_floor=0, minimum_variance=0, **kwargs):#, **hyperparameters):
+    def initialize(self, data, init_method=None, variance_floor=0, minimum_variance=0, trace=0, **kwargs):
         """Initialize HMM
         # TODO: doc
 
         """
         if init_method is None:
-            raise Exception('Initialization method is required')
+            init_method = 'HCompV'
 
         htkt.clean_models()
 
@@ -28,7 +28,7 @@ class HiddenMarkovModel(object):
             htkt.HCompV(['-C', htk_misc_dir / 'config',
                          '-S', data['script_file'],
                          '-M', hmm_model_path / '0',
-                         '-T', 1,
+                         '-T', trace,
                          '-f', "{:.10f}".format(variance_floor),
                          '-v', "{:.10f}".format(minimum_variance),
                          '-m',
@@ -43,7 +43,7 @@ class HiddenMarkovModel(object):
                             '-S', data['script_file'],
                             '-I', '../data/interim/manual_labels_real_data.mlf',
                             '-M', hmm_model_path / '0',
-                            # '-T', 1,
+                            '-T', trace,
                             '-l', label,
                             '-o', label,
                             '-v', "{:.10f}".format(minimum_variance),
@@ -52,7 +52,7 @@ class HiddenMarkovModel(object):
             htkt.HCompV(['-C', htk_misc_dir / 'config',
                          '-S', data['script_file'],
                          '-M', hmm_model_path / '0',
-                         '-T', 1,
+                         '-T', trace,
                          '-f', "{:.10f}".format(variance_floor),
                          '-m',
                          htk_misc_dir / 'proto'])
@@ -64,7 +64,7 @@ class HiddenMarkovModel(object):
 
         return 0
 
-    def train(self, data, labels, **hyperparameters):
+    def train(self, data, labels, minimum_variance=0, trace=0,  pruning_threshold=0, **hyperparameters):
         logging.info("Training the model...")
         n = 3
 
@@ -76,19 +76,20 @@ class HiddenMarkovModel(object):
                          '-H', hmm_model_path / str(self.most_trained_model) / 'hmmdefs',
                          '-M', hmm_model_path / str(self.most_trained_model + 1),
                          '-s', hmm_model_path / str(self.most_trained_model + 1) / 'stats',
-                         '-v', "{:0.10f}".format(hyperparameters['minimum_variance']),
-                         # '-t', 250.0, 150.0, 1000.0,
-                         # '-T', 1,
+                         '-v', "{:0.10f}".format(minimum_variance),
+                         '-t', 250, 150, 1000,
+                         '-T', trace,
                          htk_misc_dir / 'monophones'])
 
-            #model += 1
+            # model += 1
             self.most_trained_model += 1
 
         logging.info("Most trained model: " + str(self.most_trained_model))
 
         return self.most_trained_model
 
-    def test(self, data, labels, out_mlf_file=None, **hyperparameters):
+    def test(self, data, labels, out_mlf_file=None, word_insertion_penalty=0, grammar_scale_factor=0,
+             trace=0, **kwargs):
         logging.info("Testing model: " + str(self.most_trained_model))
 
         if out_mlf_file is None:
@@ -99,10 +100,10 @@ class HiddenMarkovModel(object):
             htkt.HVite(['-C', htk_misc_dir / 'config',
                         '-H', hmm_model_path / str(self.most_trained_model) / 'macros',
                         '-H', hmm_model_path / str(self.most_trained_model) / 'hmmdefs',
-                        '-p', "{:.10f}".format(hyperparameters['word_insertion_penalty']),
-                        '-s', "{:.10f}".format(hyperparameters['grammar_scale_factor']),
+                        '-p', "{:.10f}".format(word_insertion_penalty),
+                        '-s', "{:.10f}".format(grammar_scale_factor),
                         '-A',
-                        # '-T', 1,
+                        '-T', trace,
                         '-J', model_path / 'classes',
                         '-J', model_path / 'xforms', 'mllr1',
                         '-h', '*/%*',
@@ -121,10 +122,10 @@ class HiddenMarkovModel(object):
             htkt.HVite(['-C', htk_misc_dir / 'config',
                         '-H', hmm_model_path / str(self.most_trained_model) / 'macros',
                         '-H', hmm_model_path / str(self.most_trained_model) / 'hmmdefs',
-                        '-p', "{:.10f}".format(hyperparameters['word_insertion_penalty']),
-                        '-s', "{:.10f}".format(hyperparameters['grammar_scale_factor']),
+                        '-p', "{:.10f}".format(word_insertion_penalty),
+                        '-s', "{:.10f}".format(grammar_scale_factor),
                         '-A',
-                        # '-T', 1,
+                        '-T', trace,
                         '-S', data['script_file'],
                         '-i', interim_data_path / out_mlf_file,
                         '-w', htk_misc_dir / 'wdnet',
@@ -140,12 +141,12 @@ class HiddenMarkovModel(object):
 
         return r
 
-    def edit(self, commands, monophones_file=None):
+    def edit(self, commands, trace=0, monophones_file=None):
         logging.info("Editing model " + str(self.most_trained_model))
 
         if monophones_file is None:
             monophones_file = htk_misc_dir / 'monophones'
-            
+
         with open(src_module_dir / 'models/HTK/tmp/cmds.hed', 'wt') as cmd_file:
             for command in commands:
                 cmd_file.write(command + '\n')
@@ -153,7 +154,7 @@ class HiddenMarkovModel(object):
         htkt.HHEd(['-H', hmm_model_path / str(self.most_trained_model) / 'macros',
                    '-H', hmm_model_path / str(self.most_trained_model) / 'hmmdefs',
                    '-M', hmm_model_path / str(self.most_trained_model + 1),
-                   '-T', 1,
+                   '-T', trace,
                    src_module_dir / 'models/HTK/tmp/cmds.hed',
                    monophones_file])
 
@@ -163,14 +164,25 @@ class HiddenMarkovModel(object):
 
         return self.most_trained_model
 
-    def adapt(self, data, labels,
-              monophones_file=None):
+    def adapt(self, data, labels, gaussian_duplication_times=7, pruning_threshold=0,
+              trace=0,
+              monophones_file=None, **kwargs):
 
         logging.info("Adapting model " + str(self.most_trained_model))
 
         if monophones_file is None:
             monophones_file = htk_misc_dir / 'monophones'
-            
+
+        with open(model_path / 'classes' / 'global', 'wt') as global_file:
+            global_file.write(f"~b \n " 
+                              "\"global\" \n" 
+                              # "<MMFIDMASK> CUED_WSJ*\n" 
+                              "<MMFIDMASK> *\n"
+                              "<PARAMETERS> MIXBASE\n" 
+                              "<NUMCLASSES> 1\n" 
+                              "<CLASS> 1\n" 
+                              f"{{*.state[2 - 4].mix[1 - {25*3*gaussian_duplication_times}]}}")
+
         htkt.HERest([
             '-C', htk_misc_dir / 'config',
             '-C', htk_misc_dir / 'config.globals',
@@ -180,8 +192,8 @@ class HiddenMarkovModel(object):
             '-u', 'a',
             '-H', hmm_model_path / str(self.most_trained_model) / 'hmmdefs',
             # '-v', "{:.10f}".format(hyperparameters['minimum_variance']),
-            # '-t', 250.0,
-            '-T', 1,
+            '-t', 250, 150, 1000,
+            '-T', trace,
             '-K', model_path / 'xforms', 'mllr1',
             '-J', model_path / 'classes',
             '-h', '*/%*',
@@ -196,6 +208,7 @@ class HiddenMarkovModel(object):
                 wdnet_file=None,
                 monophones_file=None,
                 dict_file=None,
+                trace=0,
                 out_mlf_file=None):
         """Invoke HVite
         
@@ -206,20 +219,20 @@ class HiddenMarkovModel(object):
 
         if config_file is None:
             config_file = htk_misc_dir / 'config'
-        
+
         if wdnet_file is None:
             wdnet_file = htk_misc_dir / 'wdnet'
-            
+
         if monophones_file is None:
             monophones_file = htk_misc_dir / 'monophones'
-            
+
         htkt.HVite(['-C', config_file,
                     '-H', hmm_model_path / str(self.most_trained_model) / 'macros',
                     '-H', hmm_model_path / str(self.most_trained_model) / 'hmmdefs',
                     #             '-p', 0,
                     #             '-s', 5,
                     '-A',
-                    # '-T', 1,
+                    '-T', trace,
                     '-p', "{:.10f}".format(hyperparameters['word_insertion_penalty']),
                     '-s', "{:.10f}".format(hyperparameters['grammar_scale_factor']),
                     '-J', hmm_model_path / 'classes',
@@ -233,3 +246,6 @@ class HiddenMarkovModel(object):
                     monophones_file])
 
         return {'mlf': interim_data_path / out_mlf_file}
+
+    def __str__(self):
+        return self.most_trained_model

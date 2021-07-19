@@ -12,7 +12,7 @@ from npfd.data.labels import get_labels_ene, get_labels_nccd, write_label, maste
 from npfd.paths import raw_data_path, interim_data_path, figures_path, htk_misc_dir
 
 
-def make_dataset(dataset_name=None, clean_interim_dir=True, test_size=0.1):
+def make_dataset(dataset_name=None, clean_interim_dir=True, adapt_list=None, **kwargs):
     r"""Generates data files
 
     Long description
@@ -32,27 +32,29 @@ def make_dataset(dataset_name=None, clean_interim_dir=True, test_size=0.1):
     y :
 
     """
+    if not clean_interim_dir:
+        pass
     # Remove all files from interim directory
-    if clean_interim_dir:
-        clean_interim()
+    else:
+        clean_dir(interim_data_path)
 
     if dataset_name == 'db1' or dataset_name == 'db2':
         logging.info('Converting malte-uhma raw files to HTK format ...')
-        X_train, X_test, y_train, y_test = read_raw_simulations(dataset_name, test_size)
-    elif dataset_name == 'db3':
+        X_train, X_test, y_train, y_test = read_raw_simulations(dataset_name, **kwargs)
+    elif dataset_name == 'dmps' or dataset_name == 'dbtest':
         logging.info('Converting real raw files to HTK format ...')
-        X_train, X_test, y_train, y_test = read_raw_dmps(test_size=test_size)
+        X_train, X_test, y_train, y_test = read_raw_dmps(dataset_name, adapt_list=adapt_list, **kwargs)
     else:
-        raise ValueError("Invalid option: " + dataset_name)
+        raise ValueError("Invalid dataset name: " + dataset_name)
 
     return X_train, X_test, y_train, y_test
 
 
-def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.1):
+def read_raw_dmps(dataset_name=None, skip_invalid_day=False, clean_existing_data=True, test_size=0.1, adapt_list=None, **kwargs):
 
     # np.random.seed(7)
-
-    dataset_name = 'dmps'
+    if dataset_name is None:
+        dataset_name = 'dmps'
 
     train_data_path = interim_data_path / f'{dataset_name}_train'
     test_data_path = interim_data_path / f'{dataset_name}_test'
@@ -88,10 +90,10 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
     train_count = 0
     test_count = 0
 
-    for file in (raw_data_path / 'dmps/inv').glob('*.cle'):
-        nukdata = pd.read_csv(raw_data_path / 'dmps/inv' / file, sep=r'\s+')
+    for file in (raw_data_path / dataset_name / 'inv').glob('*.cle'):
+        nukdata = pd.read_csv(raw_data_path / dataset_name / 'inv' / file, sep=r'\s+')
         # nukdata = nukdata.replace(np.nan, -999)
-        nukdata.index = nukdata.iloc[:, 0].apply(decimalDOY2datetime)
+        nukdata.index = nukdata.iloc[:, 0].apply(decimalDOY2datetime, year=int(file.stem[2:6]))
 
         # TODO: change ffill
         # nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').ffill()
@@ -101,17 +103,29 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
         if skip_invalid_day and nukdata.isin([-999]).any().any():
             continue
 
-        # Split data, 90% for training, 10% for testing
-        if np.random.rand() < test_size:
-            test_count += 1
-            fo = test_data_path / file.stem[2:]
-            fo_label = test_labels_path / file.stem[2:]
-            fo_D_A = test_D_A_data_path / file.stem[2:]
+        if adapt_list is None:
+            # Split data, 90% for training, 10% for testing
+            if np.random.rand() < test_size:
+                test_count += 1
+                fo = test_data_path / file.stem[2:]
+                fo_label = test_labels_path / file.stem[2:]
+                fo_D_A = test_D_A_data_path / file.stem[2:]
+            else:
+                train_count += 1
+                fo = train_data_path / file.stem[2:]
+                fo_label = train_labels_path / file.stem[2:]
+                fo_D_A = train_D_A_data_path / file.stem[2:]
         else:
-            train_count += 1
-            fo = train_data_path / file.stem[2:]
-            fo_label = train_labels_path / file.stem[2:]
-            fo_D_A = train_D_A_data_path / file.stem[2:]
+            if file.stem[2:] in adapt_list:
+                train_count += 1
+                fo = train_data_path / file.stem[2:]
+                fo_label = train_labels_path / file.stem[2:]
+                fo_D_A = train_D_A_data_path / file.stem[2:]
+            else:
+                test_count += 1
+                fo = test_data_path / file.stem[2:]
+                fo_label = test_labels_path / file.stem[2:]
+                fo_D_A = test_D_A_data_path / file.stem[2:]
 
         day_labels = labels.loc[nukdata.index[0]:nukdata.index[0]+datetime.timedelta(days=1)].copy()
 
@@ -126,6 +140,9 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
         write_label(fo_label, day_labels)
 
         write_data(fo, np.log10(np.absolute(nukdata + 10)))
+
+        logging.debug("Train files:\t" + str(train_count))
+        logging.debug("Test files:\t" + str(test_count))
 
         HCopy([fo, fo_D_A, '-C', htk_misc_dir / 'config.hcopy'])
 
@@ -151,7 +168,7 @@ def read_raw_dmps(skip_invalid_day=False, clean_existing_data=True, test_size=0.
 
 
 def read_raw_simulations(dataset_name=None, test_size=0.1, data_version=2, normalize=True, label_type='event-noevent',
-                         clean_existing_data=True, add_na=True):
+                         clean_existing_data=True, add_na=True, **kwargs):
     """ Generate data files to be used by HTK
 
     Notes
@@ -250,19 +267,6 @@ def read_raw_simulations(dataset_name=None, test_size=0.1, data_version=2, norma
     return X_train, X_test, y_train, y_test
 
 
-def clean_interim():
-    clean_dir(interim_data_path)
-    clean_dir(figures_path)
-
-    # os.mkdir(LABEL_TEST_PATH)
-    # os.mkdir(LABEL_TRAIN_PATH)
-    # os.mkdir(RESULTS_PATH)
-    # os.mkdir(DATA_TEST_PATH)
-    # os.mkdir(DATA_TRAIN_PATH)
-    # os.mkdir(DATA_TEST_DA_PATH)
-    # os.mkdir(DATA_TRAIN_DA_PATH)
-
-
 def gen_scp_files(dataset_name):
     logging.info('Generating script (.scp) files...')
 
@@ -299,22 +303,7 @@ def gen_scp_files(dataset_name):
 
 
 if __name__ == '__main__':
-    SEARCH_PARAMS = {'normalize': True,
-                     'data_version': '2',
+    import npfd.visualization as viz
 
-                     # Labels
-                     'label_type': 'event-noevent',
-                     'nuc_threshold': 0.15,  # 1/cm3/10min
-                     'pos_vol_threshold': 200,  # 1/m3^3/10min
-                     'neg_vol_threshold': -5000,  # 1/cm3/10min
-
-                     # Initialization
-                     'variance_floor': 0.1,
-                     'minimum_variance': 0.1
-                     }
-
-    hyperparameters = {'init_metho': 'HCompV',
-              'raw_data_source': 'dmps',
-              **SEARCH_PARAMS}
-
-    read_raw_dmps()
+    X_train, X_val, y_train, y_val = make_dataset(dataset_name='dmps', clean_interim_dir=True, test_size=1)
+    viz.visualize.generate_plots('real_data', X_val, y_val)

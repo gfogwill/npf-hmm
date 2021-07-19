@@ -177,7 +177,10 @@ def get_labels_nccd(fi, hyperparameters):
 
 
 def write_label(fo_name, labels):
-    labels.index = (labels.index.to_series() - labels.index.to_series().iloc[0]).values
+    try:
+        labels.index = (labels.index.to_series() - labels.index.to_series().iloc[0]).values
+    except IndexError:
+        raise Exception(f'No labels found for file {fo_name}')
 
     fo = open(fo_name, 'wt')
     begin_event = '0'
@@ -193,9 +196,10 @@ def write_label(fo_name, labels):
             continue
 
         fo.write(begin_event + end_event + label[0][0])
+        # if end_event[1:-1] != '86400':
         begin_event = end_event[1:-1]
-        if begin_event != '86400':
-            fo.write('\n')
+
+        fo.write('\n')
     return
 
 
@@ -232,11 +236,25 @@ def master_label_file(dataset_name=None):
                 fo.write(label_file.read())
                 fo.write('\n.\n')
 
+    fix_mlf(train_mlf)
+    fix_mlf(test_mlf)
+
     return train_mlf, test_mlf
 
 
-def dmps_master_label_file():
+def fix_mlf(file):
+    # Read in the file
+    with open(file, 'r') as fo:
+        filedata = fo.read()
 
+    # Replace the target string
+    filedata = filedata.replace('\n\n', '\n')
+    # Write the file out again
+    with open(file, 'w') as fo:
+        fo.write(filedata)
+
+
+def dmps_master_label_file():
     logging.info("Generating Master Label File (Train)...")
     with open(DMPS_TRAIN_LABELS_MLF, 'wt') as fo:
         # Write MLF Header

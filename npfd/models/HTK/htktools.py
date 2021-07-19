@@ -13,12 +13,14 @@ import subprocess
 import logging
 
 from npfd.paths import model_path, htk_misc_dir
+
 hmms_path = model_path / 'hmm'
 init_model_path = hmms_path / '0'
 logging.basicConfig(level=logging.INFO)
 
 HTKDIR = '/home/gfogwil/Documentos/Facultad/Tesis/programs/htk/HTKTools/'
 NUMBER_OF_SIZE_BINS = 25
+
 
 # HTKTOOLDIR = os.path.dirname(__file__)
 # MONOPHONES_PATH = os.path.join(HTKTOOLDIR, './misc/monophones')
@@ -60,7 +62,6 @@ def gen_hmmdefs_from_proto(monophones=htk_misc_dir / 'monophones',
 
 
 def gen_hmmdefs(output=init_model_path / 'hmmdefs'):
-
     with open(hmms_path / '0/ne') as ne_file:
         ne_str = ne_file.readlines()[3:]
     with open(hmms_path / '0/e') as e_file:
@@ -74,14 +75,16 @@ def gen_hmmdefs(output=init_model_path / 'hmmdefs'):
 def gen_macros(vFloors=init_model_path / 'vFloors',
                proto=htk_misc_dir / 'proto',
                output=init_model_path / 'macros'):
-
     with open(output, 'wt') as out_file:
         with open(proto) as proto_file:
             out_file.write(proto_file.readline())
 
-        with open(vFloors) as vFloors_file:
-            for line in vFloors_file:
-                out_file.write(line)
+        try:
+            with open(vFloors) as vFloors_file:
+                for line in vFloors_file:
+                    out_file.write(line)
+        except:
+            pass
 
 
 def display_artifact(which='all'):
@@ -354,8 +357,8 @@ def HResults(args, print_output=True):
 if __name__ == '__main__':
     model = 7
     HCopy(['-S', '../data/interim/real_files.scp',
-                  '-I', '../data/raw/dmps/manual_labels.mlf',
-                  '-p', 0.000001,
-                  '-H', '../models/hmm/' + str(model) + 'macros',
-                  '-H', '../models/hmm/' + str(model) + 'hmmdefs',
-                  '-M', '../models/hmm/' + str(model + 1)])
+           '-I', '../data/raw/dmps/manual_labels.mlf',
+           '-p', 0.000001,
+           '-H', '../models/hmm/' + str(model) + 'macros',
+           '-H', '../models/hmm/' + str(model) + 'hmmdefs',
+           '-M', '../models/hmm/' + str(model + 1)])
