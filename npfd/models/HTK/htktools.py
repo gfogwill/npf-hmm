@@ -22,18 +22,6 @@ HTKDIR = '/home/gfogwil/Documentos/Facultad/Tesis/programs/htk/HTKTools/'
 NUMBER_OF_SIZE_BINS = 25
 
 
-# HTKTOOLDIR = os.path.dirname(__file__)
-# MONOPHONES_PATH = os.path.join(HTKTOOLDIR, './misc/monophones')
-# PROTO_PATH = os.path.join(HTKTOOLDIR, './misc/proto')
-#
-# OUT_INIT_PROTO_PATH = os.path.join(HTKTOOLDIR, '../../../models/hmm/0/proto')
-# OUT_INIT_HMMDEFS_PATH = os.path.join(HTKTOOLDIR, '../../../models/hmm/0/hmmdefs')
-# OUT_INIT_VFLOORS_PATH = os.path.join(HTKTOOLDIR, '../../../models/hmm/0/vFloors')
-# OUT_INIT_MACROS_PATH = os.path.join(HTKTOOLDIR, '../../../models/hmm/0/macros')
-#
-# MODELS_DIR = os.path.join(os.path.dirname(__file__), '../../../models/hmm/')
-
-
 def clean_models():
     clean_dir(hmms_path)
 

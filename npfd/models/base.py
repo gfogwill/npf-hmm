@@ -12,9 +12,9 @@ class HiddenMarkovModel(object):
         self.most_trained_model = None
         self.variance_floor = None
 
-    def initialize(self, data, init_method=None, variance_floor=0, minimum_variance=0, trace=0, **kwargs):
+    def initialize(self, data, labels=None, init_method=None, variance_floor=0, minimum_variance=0, trace=0, **kwargs):
         """Initialize HMM
-        # TODO: doc
+
 
         """
         if init_method is None:
@@ -41,7 +41,7 @@ class HiddenMarkovModel(object):
             for label in ['ne', 'e']:
                 htkt.HInit(['-C', htk_misc_dir / 'config',
                             '-S', data['script_file'],
-                            '-I', '../data/interim/manual_labels_real_data.mlf',
+                            '-I', labels['mlf'],
                             '-M', hmm_model_path / '0',
                             '-T', trace,
                             '-l', label,
@@ -64,9 +64,8 @@ class HiddenMarkovModel(object):
 
         return 0
 
-    def train(self, data, labels, minimum_variance=0, trace=0,  pruning_threshold=0, **hyperparameters):
+    def train(self, data, labels, minimum_variance=0.0, trace=0,  pruning_threshold=0.0, n=3, **hyperparameters):
         logging.info("Training the model...")
-        n = 3
 
         for i in range(self.most_trained_model, self.most_trained_model + n):
             htkt.HERest(['-C', htk_misc_dir / 'config',
@@ -77,18 +76,19 @@ class HiddenMarkovModel(object):
                          '-M', hmm_model_path / str(self.most_trained_model + 1),
                          '-s', hmm_model_path / str(self.most_trained_model + 1) / 'stats',
                          '-v', "{:0.10f}".format(minimum_variance),
-                         '-t', 250, 150, 1000,
+                         # '-t', "{:0.1f}".format(pruning_threshold),
+                         # '-A',
                          '-T', trace,
                          htk_misc_dir / 'monophones'])
 
             # model += 1
             self.most_trained_model += 1
 
-        logging.info("Most trained model: " + str(self.most_trained_model))
+        logging.debug("Most trained model: " + str(self.most_trained_model))
 
         return self.most_trained_model
 
-    def test(self, data, labels, out_mlf_file=None, word_insertion_penalty=0, grammar_scale_factor=0,
+    def test(self, data, labels, out_mlf_file=None, word_insertion_penalty=0, grammar_scale_factor=1.0,
              trace=0, **kwargs):
         logging.info("Testing model: " + str(self.most_trained_model))
 
@@ -160,7 +160,7 @@ class HiddenMarkovModel(object):
 
         self.most_trained_model += 1
 
-        logging.info("Most trained model: " + str(self.most_trained_model))
+        logging.debug("Most trained model: " + str(self.most_trained_model))
 
         return self.most_trained_model
 

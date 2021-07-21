@@ -98,7 +98,7 @@ def plot_X_y1(file, out_dir, y1):
     # ax2.axes.get_xaxis().set_visible(False)
     plt.xlim([label_start.index[0], label_end.index[-1]])
     plt.savefig(figures_path / out_dir / file.stem)
-    plt.show()
+    # plt.show()
     f.clear()
     plt.close(f)
 

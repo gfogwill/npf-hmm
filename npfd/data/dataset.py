@@ -50,7 +50,8 @@ def make_dataset(dataset_name=None, clean_interim_dir=True, adapt_list=None, **k
     return X_train, X_test, y_train, y_test
 
 
-def read_raw_dmps(dataset_name=None, skip_invalid_day=False, clean_existing_data=True, test_size=0.1, adapt_list=None, **kwargs):
+def read_raw_dmps(dataset_name=None, skip_invalid_day=False,
+                  clean_existing_data=True, test_size=0.1, adapt_list=None, **kwargs):
 
     # np.random.seed(7)
     if dataset_name is None:
@@ -90,15 +91,15 @@ def read_raw_dmps(dataset_name=None, skip_invalid_day=False, clean_existing_data
     train_count = 0
     test_count = 0
 
+    # data = read_interim_file(input_filepath, has_flag=True, year=year, utc_time=False)
+    # for idx, day in data.groupby(data.index.date):
+
     for file in (raw_data_path / dataset_name / 'inv').glob('*.cle'):
         nukdata = pd.read_csv(raw_data_path / dataset_name / 'inv' / file, sep=r'\s+')
         # nukdata = nukdata.replace(np.nan, -999)
         nukdata.index = nukdata.iloc[:, 0].apply(decimalDOY2datetime, year=int(file.stem[2:6]))
 
-        # TODO: change ffill
-        # nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').ffill()
         nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').mean()
-        # nukdata = nukdata.replace(np.nan, -999)
 
         if skip_invalid_day and nukdata.isin([-999]).any().any():
             continue
