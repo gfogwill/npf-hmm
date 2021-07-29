@@ -90,5 +90,5 @@ target/
 
 # Project exclude paths
 /venv/
-/models/
-/models/hmm/
+models/
+models/hmm/

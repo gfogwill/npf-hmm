@@ -51,9 +51,11 @@ def make_dataset(dataset_name=None, clean_interim_dir=True, adapt_list=None, **k
 
 
 def read_raw_dmps(dataset_name=None, skip_invalid_day=False,
-                  clean_existing_data=True, test_size=0.1, adapt_list=None, **kwargs):
+                  clean_existing_data=True, test_size=0.1, adapt_list=None, seed=None, **kwargs):
 
-    # np.random.seed(7)
+    if seed is not None:
+        np.random.seed(seed)
+
     if dataset_name is None:
         dataset_name = 'dmps'
 
@@ -86,21 +88,13 @@ def read_raw_dmps(dataset_name=None, skip_invalid_day=False,
         else:
             pass
 
-    # labels = pd.read_csv(raw_data_path / 'dmps_old' / 'event_classification.csv', index_col=0)
     labels = pd.read_csv(raw_data_path / dataset_name / 'events.csv', index_col=0)
     labels.index = pd.to_datetime(labels.index)
     train_count = 0
     test_count = 0
 
-    # data = read_interim_file(input_filepath, has_flag=True, year=year, utc_time=False)
-    # for idx, day in data.groupby(data.index.date):
-
     for file in (raw_data_path / dataset_name).glob('./*/*.csv'):
         nukdata = pd.read_csv(file, index_col='datetime', parse_dates=['datetime'])#.resample('10T').mean()
-        # nukdata = nukdata.replace(np.nan, -999)
-        # nukdata.index = nukdata.iloc[:, 0].apply(decimalDOY2datetime, year=int(file.stem[2:6]))
-
-        # nukdata = nukdata.drop(columns=nukdata.columns[[0, 1]]).resample('10T').mean()
 
         if skip_invalid_day and nukdata.isin([-999]).any().any():
             continue

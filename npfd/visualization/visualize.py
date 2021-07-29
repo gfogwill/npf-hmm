@@ -18,6 +18,8 @@ import shutil
 
 from ..paths import figures_path, interim_data_path
 
+import matplotlib.dates as mdates
+
 
 DATA_TEST_DA_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/test_D_A')
 RESULTS_MLF_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/results.mlf')
@@ -116,7 +118,8 @@ def plot_X_y1_y2(file, out_dir, y1, y2, show=False):
     ax1 = plt.subplot2grid((14, 12), (0, 0), rowspan=10, colspan=12)
     plt.pcolor(obs.values[::1, ::1].T, cmap='jet')
     plt.clim(0, 4)
-    plt.title(pd.to_datetime(file.stem).strftime('%Y-%m-%d'))
+    # plt.title(pd.to_datetime(file.stem).strftime('%Y-%m-%d'))
+    plt.title(file.stem)
     ax1.axes.get_xaxis().set_visible(False)
     ax2 = plt.subplot2grid((14, 12), (10, 0), rowspan=2, colspan=12)
     ax2.plot(label1_start.index, np.ones(label1_start.index.shape[0]))
@@ -160,6 +163,26 @@ def plot_X_y1_y2(file, out_dir, y1, y2, show=False):
     f.clear()
     plt.close(f)
 
+
+def spectrogram(data):
+    fig, ax = plt.subplots()
+
+    # mngr = plt.get_current_fig_manager()
+    # mngr.window.setGeometry = (50, 100, 640, 545)
+    plt.pcolor(data.index,
+               data.columns,
+               (np.log10(np.absolute(np.asarray(data)) + 10))[::1, ::1].T,
+               cmap='jet')
+
+    plt.clim(0, 4)
+    plt.axhline(y=25, color='r', linestyle='-')
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%y-%m'))
+    # date_str = idx.strftime('%Y-%m-%d')
+    # plt.title(date_str)
+
+    plt.yscale('log')
+
+    plt.show()
 
 def view_raw_file(file=None):
     """ Runs data processing scripts to turn raw data from (../raw) into
