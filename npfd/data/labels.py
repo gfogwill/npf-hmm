@@ -282,6 +282,59 @@ def dmps_master_label_file():
     return DMPS_TRAIN_LABELS_MLF, DMPS_TEST_LABELS_MLF
 
 
+def mlf_to_dataframe(mlf, date):
+    labels = pd.DataFrame()
+
+    with open(mlf, 'rt') as fi:
+        tmp_line = fi.readline().splitlines()[0]
+
+        # Encuentro la linea donde empieza la etiqueta
+        while not (tmp_line.endswith(date + '.rec"') or tmp_line.endswith(date + '.lab"')):
+            tmp_line = fi.readline().splitlines()[0]
+
+        # Leo las etiquetas
+        while tmp_line != '.':
+            tmp_line = fi.readline().splitlines()[0]
+            if tmp_line == '.':
+                break
+            line = tmp_line.split()
+            s = line[0]
+            e = line[1]
+            l = line[2]
+            s = int(int(s) / 60 / 10)
+            e = int(int(e) / 60 / 10)
+            partial = pd.DataFrame(index=range(s, e), columns=['label'])
+            partial.loc[s:e]['label'] = l
+            labels = labels.append(partial)
+
+    return labels
+
+
+def get_metric(mlf_real, mlf_auto, date):
+    real = mlf_to_dataframe(mlf_real, date)
+    real.columns = ['label_r']
+    hmm_prediction = mlf_to_dataframe(mlf_auto, date)
+    hmm_prediction.columns = ['label_a']
+
+    real = real.replace({'ne':0, 'e':1})
+    hmm_prediction = hmm_prediction.replace({'ne':0, 'e':1})
+
+    all_lab = pd.concat([real, hmm_prediction],axis=1)
+
+    m = 0
+    for idx, l in all_lab.iterrows():
+        # lr=0 & la=0
+        if not l['label_r'] and not l['label_a']:
+            m += 1
+        if not l['label_r'] and l['label_a']:
+            m += 0
+        if l['label_r'] and not l['label_a']:
+            m -= 1
+        if l['label_r'] and l['label_a']:
+            m += 1
+
+    return m / all_lab.shape[0]
+
 # def read_dmps_maual_labels():
 #     dmps_labels = pd.read_csv(EVENT_CLASSIFICATION_CSV_PATH, delim_whitespace=True,
 #                               names=['doy', 'event_type_1', 'ddoy_start_event_1', 'ddoy_end_event_1', 'event_type_2',
@@ -362,7 +415,3 @@ def dmps_master_label_file():
 #
 #     return {'mlf': MANUAL_LABELS_MLF_PATH}, {
 #         'mlf': MANUAL_LABELS_MLF_PATH}
-
-
-if __name__ == '__main__':
-    read_dmps_maual_labels()
