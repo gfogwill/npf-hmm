@@ -1,7 +1,7 @@
 import logging
 
 from npfd.models.HTK import htktools as htkt
-
+from npfd.data.labels import get_metric
 from ..paths import htk_misc_dir, hmm_model_path, interim_data_path, model_path, src_module_dir
 
 
@@ -29,6 +29,7 @@ class HiddenMarkovModel(object):
                          '-S', data['script_file'],
                          '-M', hmm_model_path / '0',
                          '-T', trace,
+                         # '-A',
                          '-f', "{:.10f}".format(variance_floor),
                          '-v', "{:.10f}".format(minimum_variance),
                          '-m',
@@ -74,7 +75,7 @@ class HiddenMarkovModel(object):
                          '-H', hmm_model_path / str(self.most_trained_model) / 'macros',
                          '-H', hmm_model_path / str(self.most_trained_model) / 'hmmdefs',
                          '-M', hmm_model_path / str(self.most_trained_model + 1),
-                         '-s', hmm_model_path / str(self.most_trained_model + 1) / 'stats',
+                         # '-s', hmm_model_path / str(self.most_trained_model + 1) / 'stats',
                          '-v', "{:0.10f}".format(minimum_variance),
                          # '-t', "{:0.1f}".format(pruning_threshold),
                          # '-A',
@@ -102,7 +103,7 @@ class HiddenMarkovModel(object):
                         '-H', hmm_model_path / str(self.most_trained_model) / 'hmmdefs',
                         '-p', "{:.10f}".format(word_insertion_penalty),
                         '-s', "{:.10f}".format(grammar_scale_factor),
-                        '-A',
+                        # '-A',
                         '-T', trace,
                         '-J', model_path / 'classes',
                         '-J', model_path / 'xforms', 'mllr1',
@@ -123,8 +124,8 @@ class HiddenMarkovModel(object):
                         '-H', hmm_model_path / str(self.most_trained_model) / 'macros',
                         '-H', hmm_model_path / str(self.most_trained_model) / 'hmmdefs',
                         '-p', "{:.10f}".format(word_insertion_penalty),
-                        '-s', "{:.10f}".format(grammar_scale_factor),
-                        '-A',
+                        # '-s', "{:.10f}".format(grammar_scale_factor),
+                        # '-A',
                         '-T', trace,
                         '-S', data['script_file'],
                         '-i', interim_data_path / out_mlf_file,
@@ -139,6 +140,10 @@ class HiddenMarkovModel(object):
 
         r['mlf'] = interim_data_path / out_mlf_file
 
+        res = get_metric(labels['mlf'], r['mlf'], data['script_file'])
+
+        r['FNR'] = res['FN'] / (res['FN'] + res['TP'])
+        r.update(res)
         return r
 
     def edit(self, commands, trace=0, monophones_file=None):

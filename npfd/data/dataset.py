@@ -41,9 +41,11 @@ def make_dataset(dataset_name=None, clean_interim_dir=True, adapt_list=None, **k
     if dataset_name == 'db1' or dataset_name == 'db2':
         logging.info('Converting malte-uhma raw files to HTK format ...')
         X_train, X_test, y_train, y_test = read_raw_simulations(dataset_name, **kwargs)
+
     elif dataset_name == 'dmps' or dataset_name == 'dbtest':
         logging.info('Converting real raw files to HTK format ...')
         X_train, X_test, y_train, y_test = read_raw_dmps(dataset_name, adapt_list=adapt_list, **kwargs)
+
     else:
         raise ValueError("Invalid dataset name: " + dataset_name)
 
@@ -54,6 +56,7 @@ def read_raw_dmps(dataset_name=None, skip_invalid_day=False,
                   clean_existing_data=True, test_size=0.1, adapt_list=None, seed=None, **kwargs):
 
     if seed is not None:
+        logging.debug(f"Using seed: {seed}")
         np.random.seed(seed)
 
     if dataset_name is None:
@@ -94,7 +97,7 @@ def read_raw_dmps(dataset_name=None, skip_invalid_day=False,
     test_count = 0
 
     for file in (raw_data_path / dataset_name).glob('./*/*.csv'):
-        nukdata = pd.read_csv(file, index_col='datetime', parse_dates=['datetime'])#.resample('10T').mean()
+        nukdata = pd.read_csv(file, index_col='datetime', parse_dates=['datetime'])  # .resample('10T').mean()
 
         if skip_invalid_day and nukdata.isin([-999]).any().any():
             continue

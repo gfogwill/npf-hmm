@@ -297,7 +297,9 @@ def mlf_to_dataframe(mlf, date):
             tmp_line = fi.readline().splitlines()[0]
             if tmp_line == '.':
                 break
+
             line = tmp_line.split()
+
             s = line[0]
             e = line[1]
             l = line[2]
@@ -310,30 +312,69 @@ def mlf_to_dataframe(mlf, date):
     return labels
 
 
-def get_metric(mlf_real, mlf_auto, date):
-    real = mlf_to_dataframe(mlf_real, date)
-    real.columns = ['label_r']
-    hmm_prediction = mlf_to_dataframe(mlf_auto, date)
-    hmm_prediction.columns = ['label_a']
-
-    real = real.replace({'ne':0, 'e':1})
-    hmm_prediction = hmm_prediction.replace({'ne':0, 'e':1})
-
-    all_lab = pd.concat([real, hmm_prediction],axis=1)
-
+def get_metric(mlf_real, mlf_auto, scp):
     m = 0
-    for idx, l in all_lab.iterrows():
-        # lr=0 & la=0
-        if not l['label_r'] and not l['label_a']:
-            m += 1
-        if not l['label_r'] and l['label_a']:
-            m += 0
-        if l['label_r'] and not l['label_a']:
-            m -= 1
-        if l['label_r'] and l['label_a']:
-            m += 1
+    n = 0
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
 
-    return m / all_lab.shape[0]
+    # E = 0
+    # NE = 0
+
+    for line in scp.open().read().splitlines():
+        date = line.split('/')[-1]
+
+        real = mlf_to_dataframe(mlf_real, date)
+        real.columns = ['label_r']
+        hmm_prediction = mlf_to_dataframe(mlf_auto, date)
+        hmm_prediction.columns = ['label_a']
+
+        real = real.replace({'ne': 0, 'e': 1})
+        hmm_prediction = hmm_prediction.replace({'ne': 0, 'e': 1})
+
+        all_lab = pd.concat([real, hmm_prediction], axis=1)
+
+        for idx, l in all_lab.iterrows():
+            # if l['label_r']:
+            #     E += 1
+            # if not l['label_r']:
+            #     NE += 1
+            if not l['label_r'] and not l['label_a']:
+                tn += 1
+            if not l['label_r'] and l['label_a']:
+                fp += 1
+            if l['label_r'] and not l['label_a']:
+                fn += 1
+            if l['label_r'] and l['label_a']:
+                tp += 1
+            # lr=0 & la=0
+            # if not l['label_r'] and not l['label_a']:
+            #     m += 1
+            # if not l['label_r'] and l['label_a']:
+            #     m -= 0.1
+            # if l['label_r'] and not l['label_a']:
+            #     m -= 3
+            # if l['label_r'] and l['label_a']:
+            #     m += 1
+
+        n += all_lab.shape[0]
+
+    # print(f"E: {E}\nNE: {NE}")
+    f1 = (2 * tp) / ((2 * tp) + fp + fn)
+    mmc = (tp*tn - fp*fn) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
+    tpr = tp / (tp + fn)
+    result = {'TP': tp,
+              'TN': tn,
+              'FP': fp,
+              'FN': fn,
+              'F1': f1,
+              'MMC': mmc,
+              'TPR': tpr,
+              'N': n}
+
+    return result
 
 # def read_dmps_maual_labels():
 #     dmps_labels = pd.read_csv(EVENT_CLASSIFICATION_CSV_PATH, delim_whitespace=True,

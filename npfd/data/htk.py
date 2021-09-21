@@ -40,7 +40,7 @@ def read_data(fi):
 
     # n is the number of vectors of data stored in HTK format. If only parameters are stored, n=1, if accelerations are
     # also stored, n=2, etc...
-    n = 3
+    n = 1
     # if which.find('D') != -1:
     #     n += 1
     # if which.find('A') != -1:
@@ -54,7 +54,7 @@ def read_data(fi):
 
     data = pd.DataFrame.from_records(data['data'].reshape(int(header['nSamples']), n*NUMBER_OF_SIZE_BINS))
 
-    return header, data.iloc[:, :25], data.iloc[:, 26:50], data.iloc[:, 51:75]
+    return header, data.iloc[:, :25]  #, data.iloc[:, 26:50], data.iloc[:, 51:75]
 
 
 def _write_header(fo, data):

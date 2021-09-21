@@ -36,11 +36,11 @@ def generate_plots(out_dir, X, y1=None, y2=None):
 
         if y2 is not None:
             for file in files_list.read().splitlines():
-                plot_X_y1_y2(pathlib.Path(file), out_dir, y1, y2)
+                plot_X_y1_y2(pathlib.Path(file), y1, y2, out_dir)
 
         elif y1 is not None:
             for file in files_list.read().splitlines():
-                plot_X_y1(pathlib.Path(file), out_dir, y1)
+                plot_X_y1(pathlib.Path(file), y1, out_dir)
 
         else:
             for file in files_list.read().splitlines():
@@ -65,7 +65,7 @@ def plot_X(file, out_dir=None):
         plt.show()
 
 
-def plot_X_y1(file, out_dir, y1):
+def plot_X_y1(file, y1, out_dir):
     _, obs, delta, acc = read_data(file)
     file_length = obs.__len__()
     label_start, label_end, labels = read_mlf_label(y1['mlf'], file.stem, file_length)
@@ -105,13 +105,13 @@ def plot_X_y1(file, out_dir, y1):
     plt.close(f)
 
 
-def plot_X_y1_y2(file, out_dir, y1, y2, show=False):
-    _, obs, delta, acc = read_data(file)
+def plot_X_y1_y2(file, y1, y2, out_dir=None, show=False):
+    # _, obs, delta, acc = read_data(file)
+    _, obs = read_data(file)
     file_length = obs.__len__()
     label1_start, label1_end, labels1 = read_mlf_label(y1['mlf'], file.stem, file_length)
     label2_start, label2_end, labels2 = read_mlf_label(y2['mlf'], file.stem, file_length)
-    # label1_start, label1_end, labels1 = read_mlf_label(y1['mlf'], file.stem, file_length)
-    # label2_start, label2_end, labels2 = read_mlf_label(y2['mlf'], file.stem, file_length)
+
     f = plt.figure()
     size = f.get_size_inches()
     lw = size[0]*72/file_length
@@ -155,11 +155,15 @@ def plot_X_y1_y2(file, out_dir, y1, y2, show=False):
         if label == 'e':
             ax3.axvline(t, color='c', linewidth=lw)
     ax3.axes.get_yaxis().set_visible(False)
-    # ax2.axes.get_xaxis().set_visible(False)
+
     plt.xlim([label1_start.index[0], label1_end.index[-1]])
-    plt.savefig(figures_path / out_dir / file.stem)
+
+    if out_dir is not None:
+        plt.savefig(figures_path / out_dir / file.stem)
+
     if show:
         plt.show()
+
     f.clear()
     plt.close(f)
 
@@ -183,6 +187,7 @@ def spectrogram(data):
     plt.yscale('log')
 
     plt.show()
+
 
 def view_raw_file(file=None):
     """ Runs data processing scripts to turn raw data from (../raw) into

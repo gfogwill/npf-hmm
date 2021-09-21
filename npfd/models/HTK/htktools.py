@@ -312,7 +312,7 @@ def HResults(args, print_output=True):
             conf (string): Path to configuration file.
             script_file (string): Path to script file to be used by HCopy.
         Returns:
-            string: Program output and possible errors. None if program didn't run.
+            dict: Program output and possible errors. None if program didn't run.
     """
     command = [HTKDIR + "HResults"]
     command.extend(args)
