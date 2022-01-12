@@ -1,7 +1,7 @@
 import skopt
 from skopt.plots import plot_convergence
-from npfd.features.scripts import train_evaluate_with_adaptation, train_evaluate
-from npfd import data
+from src.features.scripts import train_evaluate_with_adaptation, train_evaluate
+from src import data
 import matplotlib.pyplot as plt
 
 vf = [0, 10]

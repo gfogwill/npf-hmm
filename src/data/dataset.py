@@ -5,55 +5,55 @@ import pandas as pd
 import numpy as np
 import datetime
 
-from npfd.models.HTK.htktools import HCopy, clean_dir
-from npfd.data.size_distribution import cm3_to_dndlogdp, decimalDOY2datetime
-from npfd.data.htk import write_data
-from npfd.data.labels import get_labels_ene, get_labels_nccd, write_label, master_label_file, dmps_master_label_file
-from npfd.paths import raw_data_path, interim_data_path, figures_path, htk_misc_dir
+from src.models.HTK.htktools import HCopy, clean_dir
+from src.data.size_distribution import cm3_to_dndlogdp, decimalDOY2datetime
+from src.data.htk import write_data
+from src.data.labels import get_labels_ene, get_labels_nccd, write_label, master_label_file, dmps_master_label_file
+from src.paths import raw_data_path, interim_data_path, figures_path, htk_misc_dir
 
 
-def make_dataset(dataset_name=None, clean_interim_dir=True, adapt_list=None, **kwargs):
+def make_dataset(data=None, **kwargs):
     r"""Generates data files
 
-    Long description
+    Create final datasets to be used to train and test the models.
 
     Parameters
     ----------
-    dataset_name : {'malte-uhma', 'real'}, optional
-        Choices in brackets, default first when optional.
-    *args : iterable
-        Other arguments.
-    **kwargs : dict
-        Keyword arguments.
+    data : pandas.DataFrame object
+           Pandas DataFrame object with the data. Last column is the flag.
 
     Returns
     -------
-    X :
-    y :
+    X_train : array-like of shape (n_samples, n_features)
+              Training data, where `n_samples` is the number of samples
+              and `n_features` is the number of features.
+
+    X_test : array-like of shape (n_samples, n_features)
+             Testing data, where `n_samples` is the number of samples
+             and `n_features` is the number of features.
+
+    y_train : array-like of shape (n_samples,)
+              The target variable for training.
+
+    y_test : array-like of shape (n_samples,)
+             The target variable for testing data.
 
     """
-    if not clean_interim_dir:
-        pass
-    # Remove all files from interim directory
-    else:
-        clean_dir(interim_data_path)
 
-    if dataset_name == 'db1' or dataset_name == 'db2':
-        logging.info('Converting malte-uhma raw files to HTK format ...')
-        X_train, X_test, y_train, y_test = read_raw_simulations(dataset_name, **kwargs)
+    logging.info('Converting data to final format...')
+    X_train, X_test, y_train, y_test = read_raw_dmps(data, **kwargs)
 
-    elif dataset_name == 'dmps' or dataset_name == 'dbtest':
-        logging.info('Converting real raw files to HTK format ...')
-        X_train, X_test, y_train, y_test = read_raw_dmps(dataset_name, adapt_list=adapt_list, **kwargs)
-
-    else:
-        raise ValueError("Invalid dataset name: " + dataset_name)
+    logging.info('Data OK!')
 
     return X_train, X_test, y_train, y_test
 
 
-def read_raw_dmps(dataset_name=None, skip_invalid_day=False,
+def read_raw_dmps(skip_invalid_day=False,
                   clean_existing_data=True, test_size=0.1, adapt_list=None, seed=None, **kwargs):
+
+    dataset_name = 'dmps'
+
+    clean_dir(interim_data_path)
 
     if seed is not None:
         logging.debug(f"Using seed: {seed}")
@@ -302,7 +302,7 @@ def gen_scp_files(dataset_name):
 
 
 if __name__ == '__main__':
-    import npfd.visualization as viz
+    import src.visualization as viz
 
     X_train, X_val, y_train, y_val = make_dataset(dataset_name='dmps', clean_interim_dir=True, test_size=1)
     viz.visualize.generate_plots('real_data', X_val, y_val)
