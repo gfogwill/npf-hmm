@@ -3,7 +3,7 @@ import struct
 import numpy as np
 import pandas as pd
 
-from npfd.models.HTK.htktools import NUMBER_OF_SIZE_BINS
+from src.models.HTK.htktools import NUMBER_OF_SIZE_BINS
 
 
 def write_data(fo='', data=None):

@@ -9,10 +9,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.dates import DateFormatter
 
-from npfd.data.size_distribution import cm3_to_dndlogdp
-from npfd.data.dataset import clean_dir
-from npfd.data.htk import read_data
-from npfd.data.labels import get_labels_ene
+from src.data.size_distribution import cm3_to_dndlogdp
+from src.data.htk import read_data
+from src.data.labels import get_labels_ene
 
 import shutil
 

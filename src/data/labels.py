@@ -4,8 +4,8 @@ import os
 import numpy as np
 import pandas as pd
 
-from npfd.models.HTK.htktools import clean_dir
-from npfd.data.size_distribution import decimalDOY2datetime
+from src.models.HTK.htktools import clean_dir
+from src.data.size_distribution import decimalDOY2datetime
 
 from ..paths import raw_data_path, interim_data_path
 

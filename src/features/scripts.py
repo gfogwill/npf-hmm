@@ -1,5 +1,5 @@
-from npfd.models.base import HiddenMarkovModel
-from npfd import data
+from src.models.base import HiddenMarkovModel
+from src import data
 
 from verta import Client
 
