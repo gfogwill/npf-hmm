@@ -328,7 +328,27 @@ def get_metric(mlf_real, mlf_auto, scp):
 
         real = mlf_to_dataframe(mlf_real, date)
         real.columns = ['label_r']
-        hmm_prediction = mlf_to_dataframe(mlf_auto, date)
+        try:
+            hmm_prediction = mlf_to_dataframe(mlf_auto, date)
+        except IndexError:
+            tn = 0
+            fp = 0
+            fn = 0
+            tp = 0
+            f1 = 0
+            mmc = 0
+            tpr = 0
+            result = {'TP': tp,
+                      'TN': tn,
+                      'FP': fp,
+                      'FN': fn,
+                      'F1': f1,
+                      'MMC': mmc,
+                      'TPR': tpr,
+                      'N': n}
+
+            return result
+
         hmm_prediction.columns = ['label_a']
 
         real = real.replace({'ne': 0, 'e': 1})
