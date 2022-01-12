@@ -13,7 +13,7 @@ your local machine for development and testing purposes.
 
 Requirements for the software and other tools to build, test and push 
 - [Python 3](https://www.python.org)
-
+- [HTK](https://htk.eng.cam.ac.uk/)
 
 
 ## Installation
