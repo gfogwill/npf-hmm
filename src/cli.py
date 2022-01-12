@@ -1,15 +1,6 @@
 from src import __version__
 
 import click
-import logging
-
-import datetime
-from datetime import date
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-
 
 LOGO = rf"""
        ___   ___                          
