@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
+import pathlib
+
 import pandas as pd
 import random
 import logging
@@ -14,35 +16,35 @@ from npfd.data.labels import get_labels_ene
 
 import shutil
 
+from ..paths import figures_path, interim_data_path
 
-LABELS_MLF_PATH = os.path.join(os.path.dirname(__file__), '../data/interim/labels.mlf')
+import matplotlib.dates as mdates
+
 
 DATA_TEST_DA_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/test_D_A')
-
 RESULTS_MLF_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/results.mlf')
-REPORT_FIGURES_DIR = os.path.join(os.path.dirname(__file__), '../../reports/figures/')
 
 
 def generate_plots(out_dir, X, y1=None, y2=None):
 
-    if os.path.exists(REPORT_FIGURES_DIR + out_dir):
-        shutil.rmtree(REPORT_FIGURES_DIR + out_dir)
+    if os.path.exists(figures_path / out_dir):
+        shutil.rmtree(figures_path / out_dir)
 
-    os.mkdir(REPORT_FIGURES_DIR + out_dir)
+    os.mkdir(figures_path / out_dir)
 
     with open(X['script_file'], 'rt') as files_list:
 
         if y2 is not None:
             for file in files_list.read().splitlines():
-                plot_X_y1_y2(file, out_dir, y1, y2)
+                plot_X_y1_y2(pathlib.Path(file), y1, y2, out_dir)
 
         elif y1 is not None:
             for file in files_list.read().splitlines():
-                plot_X_y1(file, out_dir, y1)
+                plot_X_y1(pathlib.Path(file), y1, out_dir)
 
         else:
             for file in files_list.read().splitlines():
-                plot_X(file, out_dir)
+                plot_X(pathlib.Path(file), out_dir)
 
     return
 
@@ -53,28 +55,32 @@ def plot_X(file, out_dir=None):
     plt.pcolor(obs.values[::1, ::1].T, cmap='jet')
     plt.colorbar()
     plt.clim(0, 4)
-    plt.title(pd.to_datetime(file[-8:]).strftime('%Y-%m-%d'))
+    plt.title(pd.to_datetime(file.stem).strftime('%Y-%m-%d'))
 
     if out_dir is not None:
-        plt.savefig(REPORT_FIGURES_DIR + out_dir + '/' + file[-8:])
+        plt.savefig(figures_path / out_dir / file.stem)
         f.clear()
         plt.close(f)
     else:
         plt.show()
 
 
-def plot_X_y1(file, out_dir, y1):
+def plot_X_y1(file, y1, out_dir):
     _, obs, delta, acc = read_data(file)
-    label_start, label_end, labels = read_mlf_label(y1['mlf'], file[-8:])
+    file_length = obs.__len__()
+    label_start, label_end, labels = read_mlf_label(y1['mlf'], file.stem, file_length)
+    label_start.head()
+    label_end.head()
     f = plt.figure()
+    size = f.get_size_inches()
+    lw = size[0]*72/file_length
     ax1 = plt.subplot2grid((12, 12), (0, 0), rowspan=10, colspan=12)
     plt.pcolor(obs.values[::1, ::1].T, cmap='jet')
     plt.clim(0, 4)
-    plt.title(pd.to_datetime(file[-8:]).strftime('%Y-%m-%d'))
+    plt.title(pd.to_datetime(file.stem).strftime('%Y-%m-%d'))
     ax1.axes.get_xaxis().set_visible(False)
     ax2 = plt.subplot2grid((12, 12), (10, 0), rowspan=2, colspan=12)
     ax2.plot(label_start.index, np.ones(label_start.index.shape[0]))
-    lw = 3
     for t, label in zip(label_end.index, label_end.values):
         if label == 'equ' or label == 'ne':
             ax2.axvline(t, color='k', linewidth=lw)
@@ -88,24 +94,32 @@ def plot_X_y1(file, out_dir, y1):
             ax2.axvline(t, color='y', linewidth=lw)
         if label == 'e':
             ax2.axvline(t, color='c', linewidth=lw)
+        if label == 'na':
+            ax2.axvline(t, color='w', linewidth=lw)
     ax2.axes.get_yaxis().set_visible(False)
     # ax2.axes.get_xaxis().set_visible(False)
     plt.xlim([label_start.index[0], label_end.index[-1]])
-    plt.savefig(REPORT_FIGURES_DIR + out_dir + '/' + file[-8:])
+    plt.savefig(figures_path / out_dir / file.stem)
+    # plt.show()
     f.clear()
     plt.close(f)
 
 
-def plot_X_y1_y2(file, out_dir, y1, y2):
-    _, obs, delta, acc = read_data(file)
-    label1_start, label1_end, labels1 = read_mlf_label(y1['mlf'], file[-8:])
-    label2_start, label2_end, labels2 = read_mlf_label(y2['mlf'], file[-8:])
+def plot_X_y1_y2(file, y1, y2, out_dir=None, show=False):
+    # _, obs, delta, acc = read_data(file)
+    _, obs = read_data(file)
+    file_length = obs.__len__()
+    label1_start, label1_end, labels1 = read_mlf_label(y1['mlf'], file.stem, file_length)
+    label2_start, label2_end, labels2 = read_mlf_label(y2['mlf'], file.stem, file_length)
+
     f = plt.figure()
-    lw = 3
+    size = f.get_size_inches()
+    lw = size[0]*72/file_length
     ax1 = plt.subplot2grid((14, 12), (0, 0), rowspan=10, colspan=12)
     plt.pcolor(obs.values[::1, ::1].T, cmap='jet')
     plt.clim(0, 4)
-    plt.title(pd.to_datetime(file[-8:]).strftime('%Y-%m-%d'))
+    # plt.title(pd.to_datetime(file.stem).strftime('%Y-%m-%d'))
+    plt.title(file.stem)
     ax1.axes.get_xaxis().set_visible(False)
     ax2 = plt.subplot2grid((14, 12), (10, 0), rowspan=2, colspan=12)
     ax2.plot(label1_start.index, np.ones(label1_start.index.shape[0]))
@@ -126,6 +140,7 @@ def plot_X_y1_y2(file, out_dir, y1, y2):
     plt.xlim([label1_start.index[0], label1_end.index[-1]])
     ax3 = plt.subplot2grid((14, 12), (12, 0), rowspan=2, colspan=12)
     ax3.plot(label2_start.index, np.ones(label2_start.index.shape[0]))
+
     for t, label in zip(label2_end.index, label2_end.values):
         if label == 'equ' or label == 'ne':
             ax3.axvline(t, color='k', linewidth=lw)
@@ -140,11 +155,38 @@ def plot_X_y1_y2(file, out_dir, y1, y2):
         if label == 'e':
             ax3.axvline(t, color='c', linewidth=lw)
     ax3.axes.get_yaxis().set_visible(False)
-    # ax2.axes.get_xaxis().set_visible(False)
+
     plt.xlim([label1_start.index[0], label1_end.index[-1]])
-    plt.savefig(REPORT_FIGURES_DIR + out_dir + '/' + file[-8:])
+
+    if out_dir is not None:
+        plt.savefig(figures_path / out_dir / file.stem)
+
+    if show:
+        plt.show()
+
     f.clear()
     plt.close(f)
+
+
+def spectrogram(data):
+    fig, ax = plt.subplots()
+
+    # mngr = plt.get_current_fig_manager()
+    # mngr.window.setGeometry = (50, 100, 640, 545)
+    plt.pcolor(data.index,
+               data.columns,
+               (np.log10(np.absolute(np.asarray(data)) + 10))[::1, ::1].T,
+               cmap='jet')
+
+    plt.clim(0, 4)
+    plt.axhline(y=25, color='r', linestyle='-')
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%y-%m'))
+    # date_str = idx.strftime('%Y-%m-%d')
+    # plt.title(date_str)
+
+    plt.yscale('log')
+
+    plt.show()
 
 
 def view_raw_file(file=None):
@@ -230,7 +272,7 @@ def evaluate_hyperparameter_for_label_debug(fi, kwargs):
 
 
 def raw_file(fi):
-    size_dist_df = pd.read_hdf('../data/raw/simulation/' + fi, key='obs/particle')
+    size_dist_df = pd.read_hdf('../data/raw/malte-uhma/' + fi, key='obs/particle')
 
     plt_dim = (12, 12)
 
@@ -241,7 +283,7 @@ def raw_file(fi):
 
 
 def raw_file_as_dndlogdp(fi):
-    size_dist_df = pd.read_hdf('../data/raw/simulation/' + fi, key='obs/particle')
+    size_dist_df = pd.read_hdf('../data/raw/malte-uhma/' + fi, key='obs/particle')
 
     dndlogdp_df = cm3_to_dndlogdp(size_dist_df / 1e6)
 
@@ -442,10 +484,10 @@ def evaluate_hyperparameter_for_label(fi, hyperparameters):
 
 def evaluate_results(fi=None):
     if fi is None:
-        fi = random.choice(os.listdir(DATA_TEST_DA_PATH))
+        fi = random.choice(os.listdir(interim_data_path / 'test_D_A'))
 
     result_start, result_end, results, score = read_result_label(RESULTS_MLF_PATH, fi)
-    label_start, label_end, labels = read_mlf_label(LABELS_MLF_PATH, fi)
+    label_start, label_end, labels = read_mlf_label(interim_data_path / 'labels.mlf', fi)
 
     _, size_dist_df, delta, acc = read_data(fi)
 
@@ -552,7 +594,7 @@ def read_result_label(mlf, date):
     return start_df, end_df, label, score
 
 
-def read_mlf_label(mlf, date):
+def read_mlf_label(mlf, date, file_length=None):
     with open(mlf, 'rt') as fi:
         if fi.readline() != '#!MLF!#\n':
             print('Not a MLF file')
@@ -575,10 +617,9 @@ def read_mlf_label(mlf, date):
 
     start_df = pd.DataFrame(index=(np.array(start) / 10 / 60), data=label)
     end_df = pd.DataFrame(index=(np.array(end) / 10 / 60), data=label)
-
     try:
-        start_df = start_df.reindex(range(0, 144), method='ffill')
-        end_df = end_df.reindex(range(1, 145), method='bfill')
+        start_df = start_df.reindex(range(0, file_length), method='ffill')
+        end_df = end_df.reindex(range(1, file_length+1), method='bfill')
     except ValueError:
         print('Error in label of date: ' + date)
 
@@ -586,7 +627,7 @@ def read_mlf_label(mlf, date):
 
 
 if __name__ == '__main__':
-    data = {'script_file': '../data/interim/test.synth.scp', 'count': 543, 'id': '2.test.synth.synth'}
+
     labels = {'mlf': '../data/interim/labels.mlf'}
     results = {'mlf': '../data/interim/results.mlf'}
     generate_plots(data, labels, results)

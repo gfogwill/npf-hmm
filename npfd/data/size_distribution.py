@@ -5,17 +5,6 @@ from datetime import datetime, timedelta
 from scipy.optimize import curve_fit
 
 
-TEST_REAL_FILES = ['DM20171115.cle',
-                   'DM20170507.cle',
-                   'DM20170508.cle',
-                   'DM20170523.cle',
-                   'DM20170524.cle',
-                   'DM20170525.cle',
-                   'DM20171110.cle',
-                   'DM20171113.cle',
-                   'DM20171115.cle']
-
-
 def decimalDOY2datetime(dDOY, year=2017):
     """"
     Esta funcion convierte la fecha de formato DOY con decimales a formato 'datetime'.

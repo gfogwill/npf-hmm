@@ -7,6 +7,8 @@ import pandas as pd
 from npfd.models.HTK.htktools import clean_dir
 from npfd.data.size_distribution import decimalDOY2datetime
 
+from ..paths import raw_data_path, interim_data_path
+
 MANUAL_LABELS_MLF_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/manual_labels_real_data.mlf')
 
 TEST_LABELS_MLF = os.path.join(os.path.dirname(__file__), '../../data/interim/test_labels.mlf')
@@ -17,63 +19,61 @@ DMPS_TRAIN_LABELS_MLF = os.path.join(os.path.dirname(__file__), '../../data/inte
 DMPS_LABEL_TRAIN_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_real_train')
 DMPS_LABEL_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_real_test')
 
-RAW_SIMULATION_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/simulation/')
+RAW_SIMULATION_DATA_PATH = os.path.join(os.path.dirname(__file__), '../../data/raw/malte-uhma/')
 LABELS_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels')
-RAW_DATA_DIR = os.path.join(os.path.dirname(__file__), '../../data/raw/')
 
 LABEL_TRAIN_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_train')
 LABEL_TEST_PATH = os.path.join(os.path.dirname(__file__), '../../data/interim/labels_test')
 
 
-def make_labels(thresholds, how='event-noevent', data_version=2):
-    """Generate labels
+# def make_labels(thresholds, how='event-noevent', data_version=2):
+#     """Generate labels
+#
+#     For each .h5 file in data/raw directory generates the corresponding HTK label file.
+#
+#     Parameters
+#     ----------
+#     thresholds : int
+#         Description of arg1
+#     how : str
+#         Description of arg2
+#
+#     Returns
+#     -------
+#     bool
+#         Description of return value
+#
+#     """
+#     # Remove all files from interim/labels directory
+#     clean_dir(LABELS_PATH)
+#
+#     logging.info('Creating labels ...')
+#
+#     # for file in os.listdir(RAW_SIMULATION_DATA_PATH):
+#     #     if file.endswith('.h5') and file.startswith(data_version):
+#     # Walk over all files in data/raw directory.
+#     for file in (raw_data_path / 'malte-uhma').glob(f'*{data_version}-*.h5'):
+#         file_name = file[:-3]
+#
+#         # Calculate labels
+#         if how == 'event-noevent':
+#             labels = get_labels_ene(file, thresholds)
+#         elif how == 'nccd':
+#             labels = get_labels_nccd(file, thresholds)
+#
+#         # Write labels to file
+#         fo = os.path.join(LABELS_PATH, file_name[2:])
+#         write_label(fo, labels)
+#
+#     logging.info('Labels created OK!')
+#
+#     results = {'script_file': master_label_file()}
+#
+#     return results
 
-    For each .h5 file in data/raw directory generates the corresponding HTK label file.
 
-    Parameters
-    ----------
-    thresholds : int
-        Description of arg1
-    how : str
-        Description of arg2
-
-    Returns
-    -------
-    bool
-        Description of return value
-
-    """
-    data_version = str(data_version)
-
-    # Remove all files from interim/labels directory
-    clean_dir(LABELS_PATH)
-
-    logging.info('Creating labels ...')
-
-    # Walk over all files in data/raw directory.
-    for file in os.listdir(RAW_SIMULATION_DATA_PATH):
-        if file.endswith('.h5') and file.startswith(data_version):
-            file_name = file[:-3]
-
-            # Calculate labels
-            if how == 'event-noevent':
-                labels = get_labels_ene(file, thresholds)
-            elif how == 'nccd':
-                labels = get_labels_nccd(file, thresholds)
-
-            # Write labels to file
-            fo = os.path.join(LABELS_PATH, file_name[2:])
-            write_label(fo, labels)
-
-    logging.info('Labels created OK!')
-
-    results = {'script_file': master_label_file()}
-
-    return results
-
-
-def get_labels_ene(fi, hyperparameters):
-    """Generate labels
+def get_labels_ene(fi, add_na, nuc_threshold=0.15, pos_vol_threshold=200, neg_vol_threshold=-5000):
+    """Generate event/no-event labels
 
     Generate the labels corresponding to a specific file.
 
@@ -81,17 +81,20 @@ def get_labels_ene(fi, hyperparameters):
     ----------
     fi : file
         Description of arg1
-    thresholds : float
+    nuc_threshold : float
         Threshold used to detect nucleation event
-
+    pos_vol_threshold : float
+        Threshold used to detect nucleation event
+    neg_vol_threshold : float
+        Threshold used to detect nucleation event
     Returns
     -------
     bool
-        Description of return value
+        DataFrame with labels
 
     """
     # Read in size distribution data
-    aux_df = pd.read_hdf(RAW_SIMULATION_DATA_PATH + fi, key='aux')
+    aux_df = pd.read_hdf(raw_data_path / 'malte-uhma' / fi, key='aux')
     aux_df = aux_df.resample('10T').sum()
 
     aux_df[['dn_nuc', 'dn_coa', 'dn_dep']] = aux_df[['dn_nuc', 'dn_coa', 'dn_dep']] / 1e6
@@ -107,9 +110,9 @@ def get_labels_ene(fi, hyperparameters):
     delta_N_T = delta_N_T.where(delta_N_T.values < 100, 0)
     # delta_V_T = delta_V_T.where(delta_V_T.values < 1000, 0)
 
-    number_event = delta_N_T > hyperparameters['nuc_threshold']
-    volume_event = (delta_V_T > hyperparameters['pos_vol_threshold']) | (
-            delta_V_T < hyperparameters['neg_vol_threshold'])
+    number_event = delta_N_T > nuc_threshold
+    volume_event = (delta_V_T > pos_vol_threshold) | (
+            delta_V_T < neg_vol_threshold)
 
     label_idx = np.where(number_event | volume_event, 'e', 'ne')
 
@@ -144,7 +147,7 @@ def get_labels_nccd(fi, hyperparameters):
 
     """
     # Read in size distribution data
-    aux_df = pd.read_hdf(RAW_DATA_DIR + fi, key='aux')
+    aux_df = pd.read_hdf(raw_data_path / fi, key='aux')
     aux_df = aux_df.resample('10T').sum()
 
     aux_df[['dn_nuc', 'dn_coa', 'dn_dep']] = aux_df[['dn_nuc', 'dn_coa', 'dn_dep']] / 1e6
@@ -174,7 +177,10 @@ def get_labels_nccd(fi, hyperparameters):
 
 
 def write_label(fo_name, labels):
-    labels.index = (labels.index.to_series() - labels.index.to_series().iloc[0]).values
+    try:
+        labels.index = (labels.index.to_series() - labels.index.to_series().iloc[0]).values
+    except IndexError:
+        raise Exception(f'No labels found for file {fo_name}')
 
     fo = open(fo_name, 'wt')
     begin_event = '0'
@@ -190,43 +196,65 @@ def write_label(fo_name, labels):
             continue
 
         fo.write(begin_event + end_event + label[0][0])
+        # if end_event[1:-1] != '86400':
         begin_event = end_event[1:-1]
-        if begin_event != '86400':
-            fo.write('\n')
+
+        fo.write('\n')
     return
 
 
-def master_label_file():
+def master_label_file(dataset_name=None):
+    if dataset_name is None:
+        raise Exception('dataset_name is required')
+
+    train_mlf = interim_data_path / f'{dataset_name}_train_labels.mlf'
+    test_mlf = interim_data_path / f'{dataset_name}_test_labels.mlf'
+    train_labels_path = interim_data_path / f'{dataset_name}_labels_train'
+    test_labels_path = interim_data_path / f'{dataset_name}_labels_test'
 
     logging.info("Generating Master Label File (Train)...")
-    with open(TRAIN_LABELS_MLF, 'wt') as fo:
+    with open(train_mlf, 'wt') as fo:
         # Write MLF Header
         fo.write('#!MLF!#\n')
 
         # Write label for each label file
-        for file in os.listdir(LABEL_TRAIN_PATH):
-            with open(os.path.join(LABEL_TRAIN_PATH, file), 'rt') as label_file:
+        for file in os.listdir(train_labels_path):
+            with open(os.path.join(train_labels_path, file), 'rt') as label_file:
                 fo.write("\"*/" + file + ".lab\"\n")
                 fo.write(label_file.read())
                 fo.write('\n.\n')
 
     logging.info("Generating Master Label File (Test)...")
-    with open(TEST_LABELS_MLF, 'wt') as fo:
+    with open(test_mlf, 'wt') as fo:
         # Write MLF Header
         fo.write('#!MLF!#\n')
 
         # Write label for each label file
-        for file in os.listdir(LABEL_TEST_PATH):
-            with open(os.path.join(LABEL_TEST_PATH, file), 'rt') as label_file:
+        for file in os.listdir(test_labels_path):
+            with open(os.path.join(test_labels_path, file), 'rt') as label_file:
                 fo.write("\"*/" + file + ".lab\"\n")
                 fo.write(label_file.read())
                 fo.write('\n.\n')
 
-    return TRAIN_LABELS_MLF, TEST_LABELS_MLF
+    fix_mlf(train_mlf)
+    fix_mlf(test_mlf)
+
+    return train_mlf, test_mlf
+
+
+def fix_mlf(file):
+    # Read in the file
+    with open(file, 'r') as fo:
+        filedata = fo.read()
+
+    # Replace the target string
+    filedata = filedata.replace('\n\n', '\n')
+    # Write the file out again
+    with open(file, 'w') as fo:
+        fo.write(filedata)
 
 
 def dmps_master_label_file():
-
     logging.info("Generating Master Label File (Train)...")
     with open(DMPS_TRAIN_LABELS_MLF, 'wt') as fo:
         # Write MLF Header
@@ -253,6 +281,100 @@ def dmps_master_label_file():
 
     return DMPS_TRAIN_LABELS_MLF, DMPS_TEST_LABELS_MLF
 
+
+def mlf_to_dataframe(mlf, date):
+    labels = pd.DataFrame()
+
+    with open(mlf, 'rt') as fi:
+        tmp_line = fi.readline().splitlines()[0]
+
+        # Encuentro la linea donde empieza la etiqueta
+        while not (tmp_line.endswith(date + '.rec"') or tmp_line.endswith(date + '.lab"')):
+            tmp_line = fi.readline().splitlines()[0]
+
+        # Leo las etiquetas
+        while tmp_line != '.':
+            tmp_line = fi.readline().splitlines()[0]
+            if tmp_line == '.':
+                break
+
+            line = tmp_line.split()
+
+            s = line[0]
+            e = line[1]
+            l = line[2]
+            s = int(int(s) / 60 / 10)
+            e = int(int(e) / 60 / 10)
+            partial = pd.DataFrame(index=range(s, e), columns=['label'])
+            partial.loc[s:e]['label'] = l
+            labels = labels.append(partial)
+
+    return labels
+
+
+def get_metric(mlf_real, mlf_auto, scp):
+    m = 0
+    n = 0
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
+
+    # E = 0
+    # NE = 0
+
+    for line in scp.open().read().splitlines():
+        date = line.split('/')[-1]
+
+        real = mlf_to_dataframe(mlf_real, date)
+        real.columns = ['label_r']
+        hmm_prediction = mlf_to_dataframe(mlf_auto, date)
+        hmm_prediction.columns = ['label_a']
+
+        real = real.replace({'ne': 0, 'e': 1})
+        hmm_prediction = hmm_prediction.replace({'ne': 0, 'e': 1})
+
+        all_lab = pd.concat([real, hmm_prediction], axis=1)
+
+        for idx, l in all_lab.iterrows():
+            # if l['label_r']:
+            #     E += 1
+            # if not l['label_r']:
+            #     NE += 1
+            if not l['label_r'] and not l['label_a']:
+                tn += 1
+            if not l['label_r'] and l['label_a']:
+                fp += 1
+            if l['label_r'] and not l['label_a']:
+                fn += 1
+            if l['label_r'] and l['label_a']:
+                tp += 1
+            # lr=0 & la=0
+            # if not l['label_r'] and not l['label_a']:
+            #     m += 1
+            # if not l['label_r'] and l['label_a']:
+            #     m -= 0.1
+            # if l['label_r'] and not l['label_a']:
+            #     m -= 3
+            # if l['label_r'] and l['label_a']:
+            #     m += 1
+
+        n += all_lab.shape[0]
+
+    # print(f"E: {E}\nNE: {NE}")
+    f1 = (2 * tp) / ((2 * tp) + fp + fn)
+    mmc = (tp*tn - fp*fn) / np.sqrt((tp+fp)*(tp+fn)*(tn+fp)*(tn+fn))
+    tpr = tp / (tp + fn)
+    result = {'TP': tp,
+              'TN': tn,
+              'FP': fp,
+              'FN': fn,
+              'F1': f1,
+              'MMC': mmc,
+              'TPR': tpr,
+              'N': n}
+
+    return result
 
 # def read_dmps_maual_labels():
 #     dmps_labels = pd.read_csv(EVENT_CLASSIFICATION_CSV_PATH, delim_whitespace=True,
@@ -334,7 +456,3 @@ def dmps_master_label_file():
 #
 #     return {'mlf': MANUAL_LABELS_MLF_PATH}, {
 #         'mlf': MANUAL_LABELS_MLF_PATH}
-
-
-if __name__ == '__main__':
-    read_dmps_maual_labels()

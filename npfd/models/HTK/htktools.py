@@ -12,33 +12,29 @@ import subprocess
 
 import logging
 
+from npfd.paths import model_path, htk_misc_dir
+
+hmms_path = model_path / 'hmm'
+init_model_path = hmms_path / '0'
 logging.basicConfig(level=logging.INFO)
 
 HTKDIR = '/home/gfogwil/Documentos/Facultad/Tesis/programs/htk/HTKTools/'
 NUMBER_OF_SIZE_BINS = 25
 
-HTKTOOLDIR = os.path.dirname(__file__)
-MONOPHONES_PATH = os.path.join(HTKTOOLDIR, './misc/monophones')
-PROTO_PATH = os.path.join(HTKTOOLDIR, './misc/proto')
-
-OUT_INIT_PROTO_PATH = os.path.join(HTKTOOLDIR, '../../../models/hmm/0/proto')
-OUT_INIT_HMMDEFS_PATH = os.path.join(HTKTOOLDIR, '../../../models/hmm/0/hmmdefs')
-OUT_INIT_VFLOORS_PATH = os.path.join(HTKTOOLDIR, '../../../models/hmm/0/vFloors')
-OUT_INIT_MACROS_PATH = os.path.join(HTKTOOLDIR, '../../../models/hmm/0/macros')
-
-MODELS_DIR = os.path.join(os.path.dirname(__file__), '../../../models/hmm/')
-
 
 def clean_models():
-    clean_dir(MODELS_DIR)
+    clean_dir(hmms_path)
+
+    os.mkdir(hmms_path / 'xforms')
+    os.mkdir(hmms_path / 'classes')
 
     for i in range(50):
-        os.mkdir(MODELS_DIR + str(i))
+        os.mkdir(hmms_path / str(i))
 
 
-def gen_hmmdefs_from_proto(monophones=MONOPHONES_PATH,
-                           proto=OUT_INIT_PROTO_PATH,
-                           output=OUT_INIT_HMMDEFS_PATH):
+def gen_hmmdefs_from_proto(monophones=htk_misc_dir / 'monophones',
+                           proto=init_model_path / 'proto',
+                           output=init_model_path / 'hmmdefs'):
     print(os.getcwd())
 
     with open(proto) as proto_file:
@@ -53,11 +49,10 @@ def gen_hmmdefs_from_proto(monophones=MONOPHONES_PATH,
                 [hmmdefs.write(line) for line in proto_str[1:]]
 
 
-def gen_hmmdefs(output=OUT_INIT_HMMDEFS_PATH):
-
-    with open(MODELS_DIR + '0/ne') as ne_file:
+def gen_hmmdefs(output=init_model_path / 'hmmdefs'):
+    with open(hmms_path / '0/ne') as ne_file:
         ne_str = ne_file.readlines()[3:]
-    with open(MODELS_DIR + '0/e') as e_file:
+    with open(hmms_path / '0/e') as e_file:
         e_str = e_file.readlines()[3:]
 
     with open(output, 'wt') as hmmdefs:
@@ -65,17 +60,19 @@ def gen_hmmdefs(output=OUT_INIT_HMMDEFS_PATH):
         [hmmdefs.write(line) for line in e_str]
 
 
-def gen_macros(vFloors=OUT_INIT_VFLOORS_PATH,
-               proto=PROTO_PATH,
-               output=OUT_INIT_MACROS_PATH):
-
+def gen_macros(vFloors=init_model_path / 'vFloors',
+               proto=htk_misc_dir / 'proto',
+               output=init_model_path / 'macros'):
     with open(output, 'wt') as out_file:
         with open(proto) as proto_file:
             out_file.write(proto_file.readline())
 
-        with open(vFloors) as vFloors_file:
-            for line in vFloors_file:
-                out_file.write(line)
+        try:
+            with open(vFloors) as vFloors_file:
+                for line in vFloors_file:
+                    out_file.write(line)
+        except:
+            pass
 
 
 def display_artifact(which='all'):
@@ -126,7 +123,7 @@ def HCopy(args, print_output=False):
     if print_output:
         print(output.decode())
 
-    return output.split().__len__()
+    return output.split().__len__() / 3
 
 
 def HERest(args, print_output=True):
@@ -315,7 +312,7 @@ def HResults(args, print_output=True):
             conf (string): Path to configuration file.
             script_file (string): Path to script file to be used by HCopy.
         Returns:
-            string: Program output and possible errors. None if program didn't run.
+            dict: Program output and possible errors. None if program didn't run.
     """
     command = [HTKDIR + "HResults"]
     command.extend(args)
@@ -347,9 +344,9 @@ def HResults(args, print_output=True):
 
 if __name__ == '__main__':
     model = 7
-    HEAdapt(['-S', '../data/interim/real_files.scp',
-                  '-I', '../data/raw/dmps/manual_labels.mlf',
-                  '-p', 0.000001,
-                  '-H', '../models/hmm/' + str(model) + 'macros',
-                  '-H', '../models/hmm/' + str(model) + 'hmmdefs',
-                  '-M', '../models/hmm/' + str(model + 1)])
+    HCopy(['-S', '../data/interim/real_files.scp',
+           '-I', '../data/raw/dmps/manual_labels.mlf',
+           '-p', 0.000001,
+           '-H', '../models/hmm/' + str(model) + 'macros',
+           '-H', '../models/hmm/' + str(model) + 'hmmdefs',
+           '-M', '../models/hmm/' + str(model + 1)])
