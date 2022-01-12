@@ -7,5 +7,5 @@ setup(
     description='Detects automatically NPF events in particle size distribution data',
     author='gfogwill',
     license='MIT',
-    entry_points={"console_scripts": ["dmps = src.cli:cli"]},
+    entry_points={"console_scripts": ["npf-hmm = src.cli:cli"]},
 )
