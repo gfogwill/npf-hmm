@@ -3,7 +3,7 @@
     ~~~
     This module contains functions implemented in HTK.
 
-    :copyright: (c) 2012 by Scott Davies for Web Drive Ltd.
+    :copyright: (c) 2012
 """
 
 import os
