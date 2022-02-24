@@ -48,7 +48,7 @@ def make_dataset(data=None, **kwargs):
     return X_train, X_test, y_train, y_test
 
 
-def read_raw_dmps(skip_invalid_day=False,
+def read_raw_dmps(data=None, skip_invalid_day=False,
                   clean_existing_data=True, test_size=0.1, adapt_list=None, seed=None, **kwargs):
 
     dataset_name = 'dmps'
@@ -96,37 +96,37 @@ def read_raw_dmps(skip_invalid_day=False,
     train_count = 0
     test_count = 0
 
-    for file in (raw_data_path / dataset_name).glob('./*/*.csv'):
-        nukdata = pd.read_csv(file, index_col='datetime', parse_dates=['datetime'])  # .resample('10T').mean()
-
+    for idx, nukdata in data.groupby(pd.DatetimeIndex(data.index).date):
+        print(idx)
         if skip_invalid_day and nukdata.isin([-999]).any().any():
             continue
 
+        fo_name = idx.strftime('%Y-%m-%d')
         if adapt_list is None:
             # Split data, 90% for training, 10% for testing
             if np.random.rand() < test_size:
                 test_count += 1
-                fo = test_data_path / file.stem[2:]
-                fo_label = test_labels_path / file.stem[2:]
-                fo_D_A = test_D_A_data_path / file.stem[2:]
+                fo = test_data_path / fo_name
+                fo_label = test_labels_path / fo_name
+                fo_D_A = test_D_A_data_path / fo_name
             else:
                 train_count += 1
-                fo = train_data_path / file.stem[2:]
-                fo_label = train_labels_path / file.stem[2:]
-                fo_D_A = train_D_A_data_path / file.stem[2:]
+                fo = train_data_path / fo_name
+                fo_label = train_labels_path / fo_name
+                fo_D_A = train_D_A_data_path / fo_name
         else:
-            if file.stem[2:] in adapt_list:
+            if fo_name in adapt_list:
                 train_count += 1
-                fo = train_data_path / file.stem[2:]
-                fo_label = train_labels_path / file.stem[2:]
-                fo_D_A = train_D_A_data_path / file.stem[2:]
+                fo = train_data_path / fo_name
+                fo_label = train_labels_path / fo_name
+                fo_D_A = train_D_A_data_path / fo_name
             else:
                 test_count += 1
-                fo = test_data_path / file.stem[2:]
-                fo_label = test_labels_path / file.stem[2:]
-                fo_D_A = test_D_A_data_path / file.stem[2:]
+                fo = test_data_path / fo_name
+                fo_label = test_labels_path / fo_name
+                fo_D_A = test_D_A_data_path / fo_name
 
-        day_labels = labels.loc[nukdata.index[0]:nukdata.index[0]+datetime.timedelta(days=1)].copy()
+        day_labels = labels.loc[nukdata.index[0]:nukdata.index[-1]].copy()
 
         day_labels.where(nukdata.sum(axis=1) != 0, np.nan, inplace=True)
 
