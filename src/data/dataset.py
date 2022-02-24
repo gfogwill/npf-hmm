@@ -130,6 +130,7 @@ def read_raw_dmps(data=None, skip_invalid_day=False,
 
         day_labels.where(nukdata.sum(axis=1) != 0, np.nan, inplace=True)
 
+        nukdata = nukdata.iloc[:, :-1]
         nukdata.dropna(inplace=True)
         day_labels.dropna(inplace=True)
 
