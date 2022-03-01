@@ -48,7 +48,7 @@ def make_dataset(data=None, **kwargs):
     return X_train, X_test, y_train, y_test
 
 
-def read_raw_dmps(data=None, skip_invalid_day=False,
+def read_raw_dmps(raw_data=None, skip_invalid_day=False,
                   clean_existing_data=True, test_size=0.1, adapt_list=None, seed=None, **kwargs):
 
     dataset_name = 'dmps'
@@ -80,7 +80,6 @@ def read_raw_dmps(data=None, skip_invalid_day=False,
         os.mkdir(train_labels_path)
         os.mkdir(test_labels_path)
     except FileExistsError:
-        # pass
         if clean_existing_data:
             clean_dir(train_data_path)
             clean_dir(test_data_path)
@@ -96,7 +95,7 @@ def read_raw_dmps(data=None, skip_invalid_day=False,
     train_count = 0
     test_count = 0
 
-    for idx, nukdata in data.groupby(pd.DatetimeIndex(data.index).date):
+    for idx, nukdata in raw_data.groupby(pd.DatetimeIndex(raw_data.index).date):
         print(idx)
         if skip_invalid_day and nukdata.isin([-999]).any().any():
             continue
