@@ -96,7 +96,6 @@ def read_raw_dmps(raw_data=None, skip_invalid_day=False,
     test_count = 0
 
     for idx, nukdata in raw_data.groupby(pd.DatetimeIndex(raw_data.index).date):
-        print(idx)
         if skip_invalid_day and nukdata.isin([-999]).any().any():
             continue
 
