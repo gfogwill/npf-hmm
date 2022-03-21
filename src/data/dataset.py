@@ -90,7 +90,10 @@ def read_raw_dmps(raw_data=None, skip_invalid_day=False,
         else:
             pass
 
-    labels = pd.read_csv(raw_data_path / dataset_name / 'events.csv', index_col=0)
+    labels = raw_data[['flag']].copy() 
+    labels.columns = ['label']
+    labels = labels.replace({0:'ne', 1:'e'})
+    
     labels.index = pd.to_datetime(labels.index)
     train_count = 0
     test_count = 0
